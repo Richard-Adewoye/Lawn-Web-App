@@ -1882,47 +1882,194 @@ export function UncontrolledFeedbackForm({ onSubmitData }: { onSubmitData: (data
   {
     id: 'phase-3-advanced',
     phaseNumber: 3,
-    title: 'Phase 3: Advanced (Performance & Patterns)',
+    title: 'Phase 3: Advanced (Optimization & Architecture)',
     badge: 'Advanced',
-    description: 'Learn referential stability, memoization with useMemo/useCallback, compound component design, and performance auditing.',
-    targetAudience: 'Senior engineers optimizing applications and building scalable design systems',
+    description: 'Master referential stability, memoization with useMemo/useCallback/React.memo, code splitting with React.lazy and Suspense, advanced hooks (useReducer, useImperativeHandle), Error Boundaries, and Compound Component patterns.',
+    targetAudience: 'Senior engineers optimizing high-scale applications and crafting reusable architectural design systems',
     modules: [
       {
-        id: 'p3-m1-memo-perf',
-        title: '1. Performance: useMemo, useCallback & Referential Stability',
-        slug: 'performance-usememo-usecallback',
-        estimatedMinutes: 30,
+        id: 'p3-m1-perf-optimization',
+        title: '1. Performance: useMemo, useCallback & React.memo',
+        slug: 'performance-memoization-react-memo',
+        estimatedMinutes: 35,
         theory: {
-          summary: 'Understand when to memoize expensive calculations and stabilize callback references.',
+          summary: 'By default, when a parent component re-renders, React re-renders ALL of its children recursively, regardless of whether their props changed. Performance optimization in React centers around breaking this cascade using referential equality (Object.is) and memoization.',
           corePrinciples: [
             {
-              headline: 'Referential Equality',
-              body: 'In JavaScript, {} !== {} and () => {} !== () => {}. Every render generates new function references unless wrapped in useCallback.',
+              headline: 'Principle 1: Referential Equality (Functions and Objects)',
+              body: 'In JavaScript, {} !== {} and () => {} !== () => {}. Every time a component renders, inline objects and inline arrow functions receive brand new memory addresses, causing memoized children to fail shallow equality checks and re-render unnecessarily.',
+              pitfall: 'Passing an inline onClick={() => doAction()} to a React.memo child: the child re-renders on every parent render because the function reference is always brand new.',
+            },
+            {
+              headline: 'Principle 2: The Role of useCallback',
+              body: 'useCallback(fn, deps) caches a function definition between renders. It does NOT make the function execute faster; its sole purpose is to provide a stable memory reference so memoized child components can skip re-renders.',
+              pitfall: 'Wrapping every simple function in useCallback when passing to standard HTML elements like <button>: standard HTML tags do not benefit from memoization.',
+            },
+            {
+              headline: 'Principle 3: The Role of useMemo',
+              body: 'useMemo(() => calculate(), deps) caches the RESULT of an expensive calculation. Only use it when: (1) the calculation takes noticeable time (>1ms per run on 1,000+ items), or (2) you need to pass an object or array to a memoized child without breaking referential stability.',
+              pitfall: 'Prematurely wrapping simple arithmetic like useMemo(() => a + b, [a, b]): the overhead of useMemo (allocating closures and comparing arrays) is more expensive than the calculation itself!',
+            },
+            {
+              headline: 'Principle 4: React.memo Component Wrapping',
+              body: 'Wrap a child component in React.memo(MyComponent) to tell React: "Only re-render this child if its incoming props have changed by shallow comparison (prevProps[key] !== nextProps[key])".',
+              pitfall: 'Using React.memo on a component that receives a non-memoized object or function prop: it will still re-render every time, wasting the shallow comparison effort.',
             },
           ],
-          codeExamples: [],
+          codeExamples: [
+            {
+              title: 'Combining React.memo, useCallback and useMemo',
+              code: `import React, { useState, useMemo, useCallback } from 'react';
+
+// 1. Child wrapped in React.memo: Skips re-render if props are referentially equal!
+const MemoizedServiceRow = React.memo(function ServiceRow({
+  service,
+  onBook,
+}: {
+  service: { id: string; name: string; price: number };
+  onBook: (id: string) => void;
+}) {
+  console.log('ServiceRow rendered:', service.name);
+  return (
+    <div className="flex justify-between items-center p-2 border-b">
+      <span>{service.name} - \${service.price}</span>
+      <button onClick={() => onBook(service.id)} className="px-2 py-1 bg-emerald-600 text-white text-xs rounded">
+        Book
+      </button>
+    </div>
+  );
+});
+
+// 2. Parent Coordinator
+export function OptimizedServicesCatalog({ allServices }: { allServices: any[] }) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [unrelatedCounter, setUnrelatedCounter] = useState(0);
+
+  // useMemo: Caches filtered array so filter doesn't re-run on counter clicks!
+  const filteredServices = useMemo(() => {
+    return allServices.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [allServices, searchTerm]);
+
+  // useCallback: Stable function reference so MemoizedServiceRow skips re-render!
+  const handleBook = useCallback((id: string) => {
+    console.log('Book service:', id);
+  }, []);
+
+  return (
+    <div>
+      <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+      {/* Clicking this counter re-renders parent, but MemoizedServiceRow DOES NOT re-render! */}
+      <button onClick={() => setUnrelatedCounter(c => c + 1)}>
+        Rerender Parent ({unrelatedCounter})
+      </button>
+      {filteredServices.map(s => (
+        <MemoizedServiceRow key={s.id} service={s} onBook={handleBook} />
+      ))}
+    </div>
+  );
+}`,
+              explanation: 'Notice how handleBook has a stable identity via useCallback, and filteredServices is cached via useMemo. Clicking the unrelated counter re-renders the parent, but zero child rows re-render!',
+            },
+          ],
         },
         playground: {
-          id: 'pg-p3-perf',
-          title: 'Render Counter & Memo Benchmark',
-          description: 'See live render counts increase with un-memoized vs memoized callbacks.',
-          type: 'state-sandbox',
-          initialState: { calculationsRun: 0 },
+          id: 'pg-p3-memo-perf',
+          title: 'Memoization Benchmark & Render Cascade Laboratory',
+          description: 'Witness the render cascade in real time. Toggle React.memo and useCallback ON vs OFF, trigger parent state changes, and watch the child render counter register skips vs re-renders!',
+          type: 'memo-benchmark-lab',
+          initialState: {
+            memoEnabled: true,
+            callbackMemoEnabled: true,
+            parentTick: 0,
+            childRenderCount: 0,
+            calculationRuns: 0,
+          },
         },
         challenge: {
           id: 'ch-p3-memo',
-          title: 'Challenge: Optimize an Expensive Service Filter',
-          instructions: 'Wrap an expensive calculation with useMemo to prevent re-execution on unrelated state changes.',
-          starterCode: `import React, { useMemo } from 'react';\n\nexport function ServiceFilter({ items, search }: any) {\n  // TODO: Wrap with useMemo\n  const filtered = items.filter((i: any) => i.name.includes(search));\n  return <div>{filtered.length}</div>;\n}`,
-          solutionCode: `import React, { useMemo } from 'react';\n\nexport function ServiceFilter({ items, search }: any) {\n  const filtered = useMemo(() => {\n    return items.filter((i: any) => i.name.includes(search));\n  }, [items, search]);\n  return <div>{filtered.length}</div>;\n}`,
-          hints: ['useMemo(() => items.filter(...), [items, search])'],
-          explanation: 'useMemo caches computation results between renders.',
+          title: 'Challenge: Optimize an Expensive Filter & Memoize Child Rows',
+          instructions: 'Wrap an expensive calculation with useMemo to cache its result based on [services, minPrice], wrap the handleSelect callback with useCallback, and wrap ServiceItemRow in React.memo so it skips re-renders on unrelated parent state changes.',
+          starterCode: `import React, { useState, useMemo, useCallback } from 'react';
+
+// TODO: Wrap with React.memo
+function ServiceItemRow({ item, onSelect }: any) {
+  return <button onClick={() => onSelect(item.id)}>{item.name}</button>;
+}
+
+export function FilteredCatalog({ services }: any) {
+  const [minPrice, setMinPrice] = useState(50);
+  const [counter, setCounter] = useState(0);
+
+  // TODO: Wrap with useMemo
+  const filtered = services.filter((s: any) => s.price >= minPrice);
+
+  // TODO: Wrap with useCallback
+  const handleSelect = (id: string) => {
+    console.log('Selected:', id);
+  };
+
+  return (
+    <div>
+      <button onClick={() => setCounter(c => c + 1)}>Tick: {counter}</button>
+      {filtered.map((s: any) => (
+        <ServiceItemRow key={s.id} item={s} onSelect={handleSelect} />
+      ))}
+    </div>
+  );
+}`,
+          solutionCode: `import React, { useState, useMemo, useCallback } from 'react';
+
+const ServiceItemRow = React.memo(function ServiceItemRow({ item, onSelect }: any) {
+  return <button onClick={() => onSelect(item.id)}>{item.name}</button>;
+});
+
+export function FilteredCatalog({ services }: any) {
+  const [minPrice, setMinPrice] = useState(50);
+  const [counter, setCounter] = useState(0);
+
+  const filtered = useMemo(() => {
+    return services.filter((s: any) => s.price >= minPrice);
+  }, [services, minPrice]);
+
+  const handleSelect = useCallback((id: string) => {
+    console.log('Selected:', id);
+  }, []);
+
+  return (
+    <div>
+      <button onClick={() => setCounter(c => c + 1)}>Tick: {counter}</button>
+      {filtered.map((s: any) => (
+        <ServiceItemRow key={s.id} item={s} onSelect={handleSelect} />
+      ))}
+    </div>
+  );
+}`,
+          hints: [
+            'Use const ServiceItemRow = React.memo(function ServiceItemRow(...) { ... });',
+            'Wrap filtered in useMemo(() => services.filter(...), [services, minPrice]);',
+            'Wrap handleSelect in useCallback((id: string) => { ... }, []);',
+          ],
+          explanation: 'Combining React.memo on the child with useCallback on the callback and useMemo on the dataset stops the re-render cascade dead in its tracks.',
           testCases: [
             {
-              description: 'Uses useMemo with dependency array',
+              description: 'Wraps child component in React.memo',
               validate: (code) => ({
-                passed: /useMemo\(/.test(code) && /\[items,\s*search\]/.test(code),
-                message: 'Wrap calculation in useMemo with [items, search] dependencies',
+                passed: /React\.memo\(/.test(code),
+                message: 'Wrap ServiceItemRow with React.memo(...)',
+              }),
+            },
+            {
+              description: 'Memoizes filtered services using useMemo with dependencies',
+              validate: (code) => ({
+                passed: /useMemo\s*\(\s*\(\)\s*=>[\s\S]*\[services,\s*minPrice\]/.test(code) || /useMemo\s*\(\s*\(\)\s*=>/.test(code),
+                message: 'Wrap filtered services calculation in useMemo(() => ..., [services, minPrice])',
+              }),
+            },
+            {
+              description: 'Stabilizes handleSelect using useCallback',
+              validate: (code) => ({
+                passed: /useCallback\s*\(/.test(code),
+                message: 'Wrap handleSelect with useCallback((id: string) => ..., [])',
               }),
             },
           ],
@@ -1930,7 +2077,640 @@ export function UncontrolledFeedbackForm({ onSubmitData }: { onSubmitData: (data
         appliedInApp: {
           componentName: 'ServicesSection.tsx',
           filePath: '/components/ServicesSection.tsx',
-          description: 'Uses useMemo to cache filtered seasonal services without unnecessary re-renders.',
+          description: 'Uses useMemo to cache filtered seasonal services without recalculating on unrelated scrolls.',
+        },
+      },
+      {
+        id: 'p3-m2-code-splitting',
+        title: '2. Code Splitting & Lazy Loading (React.lazy, Suspense)',
+        slug: 'code-splitting-lazy-suspense',
+        estimatedMinutes: 25,
+        theory: {
+          summary: 'In single-page applications, loading all JavaScript in a single initial bundle hurts Core Web Vitals (FCP, LCP). Code splitting breaks your bundle into on-demand chunks. React.lazy lets you render a dynamic import as a regular component, and Suspense coordinates the loading fallback state.',
+          corePrinciples: [
+            {
+              headline: 'Principle 1: Dynamic import() and Chunking',
+              body: 'When Webpack, Vite, or Turbopack sees const HeavyModal = React.lazy(() => import("./HeavyModal")), it splits HeavyModal into a separate .js file that is ONLY downloaded from the network when the user opens the modal.',
+              pitfall: 'Using React.lazy on tiny components: the network request overhead for a 20-line component is slower than including it in the main bundle.',
+            },
+            {
+              headline: 'Principle 2: The Suspense Boundary Contract',
+              body: 'React.lazy components MUST be rendered inside a <Suspense fallback={<Skeleton />}> boundary. If a child suspends while loading its chunk over the network, React catches the promise and displays the fallback UI until the chunk resolves.',
+              pitfall: 'Omitting the <Suspense> boundary around a React.lazy component throws an uncaught runtime error.',
+            },
+            {
+              headline: 'Principle 3: Route-Based vs Component-Based Splitting',
+              body: 'Route-based splitting lazily loads entire pages (e.g., /admin, /analytics). Component-based splitting lazily loads heavy dialogs, 3D visualizers, rich text editors, and interactive charts only when requested.',
+              pitfall: 'Triggering lazy loading on hover without prefetching can lead to a slight delay before the modal opens on slow 3G connections.',
+            },
+          ],
+          codeExamples: [
+            {
+              title: 'Lazy-Loading a Heavy Modal with Suspense Skeleton Fallback',
+              code: `import React, { useState, Suspense } from 'react';
+
+// 1. Dynamic import: HeavyModal code chunk is NOT in the main bundle!
+const LazyQuoteModal = React.lazy(() => import('./QuoteModal'));
+
+// 2. Loading Skeleton Fallback
+function ModalLoadingSkeleton() {
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="w-full max-w-lg bg-neutral-900 p-6 rounded-2xl animate-pulse space-y-3">
+        <div className="h-6 bg-neutral-800 rounded w-1/2" />
+        <div className="h-24 bg-neutral-800 rounded" />
+        <div className="h-10 bg-emerald-900/40 rounded" />
+      </div>
+    </div>
+  );
+}
+
+export function LawnBusterLanding() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div>
+      <button onClick={() => setIsOpen(true)}>Open Instant Quote Calculator</button>
+
+      {isOpen && (
+        <Suspense fallback={<ModalLoadingSkeleton />}>
+          <LazyQuoteModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
+        </Suspense>
+      )}
+    </div>
+  );
+}`,
+              explanation: 'QuoteModal (with all its calculators, charts, and date pickers) is completely excluded from initial page load. It downloads only when the user clicks "Open Instant Quote Calculator".',
+            },
+          ],
+        },
+        playground: {
+          id: 'pg-p3-lazy',
+          title: 'Code Splitting & Suspense Simulator',
+          description: 'Simulate network latency on dynamic imports. Click to lazy-load the heavy 3D Yard Visualizer and watch Suspense catch the loading chunk and display the skeleton UI.',
+          type: 'lazy-suspense-lab',
+          initialState: {
+            simulatedNetworkDelayMs: 800,
+            isLoaded: false,
+            isLoading: false,
+            chunkSizeKb: 342,
+          },
+        },
+        challenge: {
+          id: 'ch-p3-lazy',
+          title: 'Challenge: Implement a Lazy-Loaded Modal with Suspense Fallback',
+          instructions: 'Use React.lazy to dynamically import "./HeavyReportModal" and wrap it in a <Suspense fallback={<p>Loading Report...</p>}> boundary that renders only when "showReport" is true.',
+          starterCode: `import React, { useState, Suspense } from 'react';
+
+// TODO: Define LazyReport using React.lazy
+
+export function AnalyticsDashboard() {
+  const [showReport, setShowReport] = useState(false);
+
+  return (
+    <div>
+      <button onClick={() => setShowReport(true)}>Load Heavy Report</button>
+      {/* TODO: Render LazyReport wrapped in Suspense with fallback */}
+    </div>
+  );
+}`,
+          solutionCode: `import React, { useState, Suspense } from 'react';
+
+const LazyReport = React.lazy(() => import('./HeavyReportModal'));
+
+export function AnalyticsDashboard() {
+  const [showReport, setShowReport] = useState(false);
+
+  return (
+    <div>
+      <button onClick={() => setShowReport(true)}>Load Heavy Report</button>
+      {showReport && (
+        <Suspense fallback={<p>Loading Report...</p>}>
+          <LazyReport />
+        </Suspense>
+      )}
+    </div>
+  );
+}`,
+          hints: [
+            'Define const LazyReport = React.lazy(() => import("./HeavyReportModal"));',
+            'Render <Suspense fallback={<p>Loading Report...</p>}><LazyReport /></Suspense>',
+          ],
+          explanation: 'React.lazy combined with Suspense isolates heavy third-party dependencies from the primary application bundle.',
+          testCases: [
+            {
+              description: 'Declares lazy component using React.lazy and dynamic import',
+              validate: (code) => ({
+                passed: /React\.lazy\s*\(\s*\(\)\s*=>\s*import\(/.test(code),
+                message: 'Use React.lazy(() => import("./HeavyReportModal"))',
+              }),
+            },
+            {
+              description: 'Wraps lazy component in Suspense with fallback prop',
+              validate: (code) => ({
+                passed: /<Suspense\s+fallback=/.test(code),
+                message: 'Wrap with <Suspense fallback={<p>Loading Report...</p>}>',
+              }),
+            },
+          ],
+        },
+        appliedInApp: {
+          componentName: 'QuoteModal.tsx',
+          filePath: '/components/QuoteModal.tsx',
+          description: 'Ideal candidate for React.lazy code splitting in production to shave 40kb off initial bundle delivery.',
+        },
+      },
+      {
+        id: 'p3-m3-advanced-hooks',
+        title: '3. Advanced Hooks: useReducer & useImperativeHandle',
+        slug: 'advanced-hooks-usereducer-useimperativehandle',
+        estimatedMinutes: 30,
+        theory: {
+          summary: 'As component state complexity grows, useState can lead to fragmented state updates and impossible states. useReducer organizes state into a formal state machine with pure reducer transitions. useImperativeHandle customizes the public methods exposed to parent refs when using forwardRef.',
+          corePrinciples: [
+            {
+              headline: 'Principle 1: useReducer for Complex State Machines',
+              body: 'When your component has 4+ interdependent state variables (e.g. status: idle | loading | success | error, step, data, validationErrors), useReducer consolidates them. Reducers are pure functions (state, action) => nextState that are 100% testable in isolation.',
+              pitfall: 'Mutating state inside a reducer function: reducers must be pure and return new objects ({ ...state, key: val }).',
+            },
+            {
+              headline: 'Principle 2: Discriminated Union Actions',
+              body: 'In TypeScript, type actions as a discriminated union: type Action = { type: "SET_LOT"; payload: string } | { type: "TOGGLE_SERVICE"; serviceId: string } | { type: "RESET" }. This gives full type safety inside switch (action.type) blocks.',
+              pitfall: 'Using untyped string actions without TypeScript unions leads to silent spelling typos.',
+            },
+            {
+              headline: 'Principle 3: useImperativeHandle with forwardRef',
+              body: 'By default, passing a ref to a child exposes the raw HTML element. useImperativeHandle(ref, () => ({ validateForm, resetFields })) lets the child expose custom imperative methods to the parent without exposing raw DOM nodes.',
+              pitfall: 'Overusing useImperativeHandle for everyday data flow: React is declarative; imperative ref handles are reserved for focus management, media playback, and form validation controllers.',
+            },
+          ],
+          codeExamples: [
+            {
+              title: 'Multi-Step Quote State Machine with useReducer',
+              code: `import React, { useReducer } from 'react';
+
+interface WizardState {
+  step: 1 | 2 | 3;
+  lotSize: 'standard' | 'large';
+  services: string[];
+  status: 'draft' | 'submitting' | 'confirmed';
+}
+
+type WizardAction =
+  | { type: 'NEXT_STEP' }
+  | { type: 'PREV_STEP' }
+  | { type: 'SET_LOT'; payload: 'standard' | 'large' }
+  | { type: 'TOGGLE_SERVICE'; serviceId: string }
+  | { type: 'CONFIRM' };
+
+function wizardReducer(state: WizardState, action: WizardAction): WizardState {
+  switch (action.type) {
+    case 'NEXT_STEP':
+      return { ...state, step: Math.min(state.step + 1, 3) as any };
+    case 'PREV_STEP':
+      return { ...state, step: Math.max(state.step - 1, 1) as any };
+    case 'SET_LOT':
+      return { ...state, lotSize: action.payload };
+    case 'TOGGLE_SERVICE':
+      const exists = state.services.includes(action.serviceId);
+      return {
+        ...state,
+        services: exists
+          ? state.services.filter(s => s !== action.serviceId)
+          : [...state.services, action.serviceId],
+      };
+    case 'CONFIRM':
+      return { ...state, status: 'confirmed' };
+    default:
+      return state;
+  }
+}
+
+export function QuoteWizard() {
+  const [state, dispatch] = useReducer(wizardReducer, {
+    step: 1,
+    lotSize: 'standard',
+    services: ['Mowing'],
+    status: 'draft',
+  });
+
+  return (
+    <div className="p-4 bg-white rounded-xl border">
+      <h4 className="font-bold">Step {state.step} of 3: Status: {state.status}</h4>
+      <div className="flex gap-2 my-2">
+        <button onClick={() => dispatch({ type: 'SET_LOT', payload: 'standard' })}>Standard Lot</button>
+        <button onClick={() => dispatch({ type: 'SET_LOT', payload: 'large' })}>Large Lot</button>
+      </div>
+      <div className="flex justify-between mt-4">
+        <button onClick={() => dispatch({ type: 'PREV_STEP' })} disabled={state.step === 1}>Back</button>
+        <button onClick={() => dispatch({ type: 'NEXT_STEP' })} disabled={state.step === 3}>Next</button>
+      </div>
+    </div>
+  );
+}`,
+              explanation: 'useReducer encapsulates complex multi-step transitions in a single pure function, preventing invalid step states and race conditions.',
+            },
+          ],
+        },
+        playground: {
+          id: 'pg-p3-reducer',
+          title: 'useReducer State Machine & Imperative Handle Lab',
+          description: 'Step through an interactive quote booking state machine. Dispatch actions (NEXT_STEP, TOGGLE_SERVICE, CONFIRM) and inspect the live immutable state transition log.',
+          type: 'reducer-imperative-lab',
+          initialState: {
+            step: 1,
+            lotSize: 'standard',
+            services: ['Power Raking'],
+            status: 'draft',
+            actionHistory: [],
+          },
+        },
+        challenge: {
+          id: 'ch-p3-reducer',
+          title: 'Challenge: Build a Multi-Step Booking Reducer',
+          instructions: 'Implement a pure reducer function "bookingReducer" that handles: (1) "SET_PROPERTY_TYPE" with payload, (2) "ADD_SERVICE" with serviceId, and (3) "RESET" which returns initial state.',
+          starterCode: `type State = { propertyType: string; services: string[] };
+type Action =
+  | { type: 'SET_PROPERTY_TYPE'; payload: string }
+  | { type: 'ADD_SERVICE'; serviceId: string }
+  | { type: 'RESET' };
+
+export const initialState: State = { propertyType: 'residential', services: [] };
+
+export function bookingReducer(state: State, action: Action): State {
+  // TODO: Implement switch (action.type) returning new immutable state
+  return state;
+}`,
+          solutionCode: `type State = { propertyType: string; services: string[] };
+type Action =
+  | { type: 'SET_PROPERTY_TYPE'; payload: string }
+  | { type: 'ADD_SERVICE'; serviceId: string }
+  | { type: 'RESET' };
+
+export const initialState: State = { propertyType: 'residential', services: [] };
+
+export function bookingReducer(state: State, action: Action): State {
+  switch (action.type) {
+    case 'SET_PROPERTY_TYPE':
+      return { ...state, propertyType: action.payload };
+    case 'ADD_SERVICE':
+      return { ...state, services: [...state.services, action.serviceId] };
+    case 'RESET':
+      return initialState;
+    default:
+      return state;
+  }
+}`,
+          hints: [
+            'Use switch (action.type) with case "SET_PROPERTY_TYPE": return { ...state, propertyType: action.payload };',
+            'For case "ADD_SERVICE": return { ...state, services: [...state.services, action.serviceId] };',
+            'For case "RESET": return initialState;',
+          ],
+          explanation: 'Pure reducer functions are the standard pattern for complex multi-field forms and transactional workflows in React.',
+          testCases: [
+            {
+              description: 'Handles SET_PROPERTY_TYPE action',
+              validate: (code) => ({
+                passed: /case\s+['"]SET_PROPERTY_TYPE['"]/.test(code) && /propertyType:\s*action\.payload/.test(code),
+                message: 'Implement case "SET_PROPERTY_TYPE" updating propertyType',
+              }),
+            },
+            {
+              description: 'Handles ADD_SERVICE action immutably',
+              validate: (code) => ({
+                passed: /case\s+['"]ADD_SERVICE['"]/.test(code) && /\[\s*\.\.\.state\.services,\s*action\.serviceId\s*\]/.test(code),
+                message: 'Implement case "ADD_SERVICE" appending serviceId via array spread',
+              }),
+            },
+            {
+              description: 'Handles RESET action returning initial state',
+              validate: (code) => ({
+                passed: /case\s+['"]RESET['"]/.test(code) && /return\s+initialState/.test(code),
+                message: 'Implement case "RESET" returning initialState',
+              }),
+            },
+          ],
+        },
+        appliedInApp: {
+          componentName: 'QuoteModal.tsx',
+          filePath: '/components/QuoteModal.tsx',
+          description: 'The quote calculator logic operates as a multi-step form state machine.',
+        },
+      },
+      {
+        id: 'p3-m4-error-boundaries',
+        title: '4. Declarative Resiliency: Error Boundaries',
+        slug: 'declarative-resiliency-error-boundaries',
+        estimatedMinutes: 25,
+        theory: {
+          summary: 'In JavaScript, a runtime crash in one component unmounts the ENTIRE React component tree, leaving the user with an empty white screen. Error Boundaries are React components that catch JavaScript errors anywhere in their child component tree, log those errors, and display a fallback UI instead of crashing the whole page.',
+          corePrinciples: [
+            {
+              headline: 'Principle 1: Class Component Requirement',
+              body: 'As of React 19, Error Boundaries must still be Class Components because hooks do not yet have equivalents for componentDidCatch or static getDerivedStateFromError.',
+              pitfall: 'Trying to write a functional component with useEffect to catch rendering errors: useEffect only runs after render succeeds, so render crashes bypass it completely!',
+            },
+            {
+              headline: 'Principle 2: getDerivedStateFromError vs componentDidCatch',
+              body: 'static getDerivedStateFromError(error) is used to render fallback UI by returning { hasError: true }. componentDidCatch(error, errorInfo) is used to log the error to telemetry services (e.g., Sentry).',
+              pitfall: 'Calling side-effects inside getDerivedStateFromError: it must be a pure function that only returns next state.',
+            },
+            {
+              headline: 'Principle 3: Granular Boundary Isolation',
+              body: 'Wrap independent widgets (e.g. Weather Radar, Video Player, Review Carousel) in their own separate Error Boundaries. If the weather radar API crashes, only that card shows a retry button while the rest of the application remains fully functional.',
+              pitfall: 'Placing only one single Error Boundary at the root of your application: any small widget error takes down the whole screen.',
+            },
+          ],
+          codeExamples: [
+            {
+              title: 'Production Error Boundary with Retry Fallback',
+              code: `import React, { Component, ErrorInfo, ReactNode } from 'react';
+
+interface Props {
+  fallbackTitle?: string;
+  children: ReactNode;
+}
+
+interface State {
+  hasError: boolean;
+  errorMessage: string;
+}
+
+export class LawnBusterErrorBoundary extends Component<Props, State> {
+  public state: State = {
+    hasError: false,
+    errorMessage: '',
+  };
+
+  public static getDerivedStateFromError(error: Error): State {
+    // 1. Update state so next render shows fallback UI
+    return { hasError: true, errorMessage: error.message };
+  }
+
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // 2. Log error details to analytics / monitoring
+    console.error('LawnBuster widget crash caught:', error, errorInfo);
+  }
+
+  private handleRetry = () => {
+    // 3. Reset error state so child components attempt to re-render
+    this.setState({ hasError: false, errorMessage: '' });
+  };
+
+  public render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-900 space-y-2">
+          <h4 className="font-bold text-xs">⚠️ {this.props.fallbackTitle || 'Widget Temporarily Unavailable'}</h4>
+          <p className="text-[11px] text-red-700">{this.state.errorMessage}</p>
+          <button
+            onClick={this.handleRetry}
+            className="px-3 py-1 bg-red-700 text-white rounded text-xs font-bold"
+          >
+            Retry Loading
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}`,
+              explanation: 'This boundary catches rendering crashes in nested children and provides a local retry button without affecting sibling components or the navbar.',
+            },
+          ],
+        },
+        playground: {
+          id: 'pg-p3-errors',
+          title: 'Error Boundary Stress Tester & Isolation Lab',
+          description: 'Simulate deliberate runtime crashes in an isolated widget. Watch the Error Boundary catch the error, render the fallback UI, and recover upon clicking Retry without reloading the webpage.',
+          type: 'error-boundary-lab',
+          initialState: {
+            isCrashSimulated: false,
+            isolatedBoundaryEnabled: true,
+            recoveredCount: 0,
+          },
+        },
+        challenge: {
+          id: 'ch-p3-boundary',
+          title: 'Challenge: Implement an Error Boundary with getDerivedStateFromError',
+          instructions: 'Build a class component "SafeWidgetBoundary" that defines "static getDerivedStateFromError(error)" returning "{ hasError: true }" and renders a fallback message when "this.state.hasError" is true.',
+          starterCode: `import React, { Component } from 'react';
+
+export class SafeWidgetBoundary extends Component<{ children: any }, { hasError: boolean }> {
+  state = { hasError: false };
+
+  // TODO: Add static getDerivedStateFromError
+
+  render() {
+    // TODO: Return fallback if hasError, else children
+    return this.props.children;
+  }
+}`,
+          solutionCode: `import React, { Component } from 'react';
+
+export class SafeWidgetBoundary extends Component<{ children: any }, { hasError: boolean }> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <div className="p-3 bg-red-100 text-red-800">Widget failed to load.</div>;
+    }
+    return this.props.children;
+  }
+}`,
+          hints: [
+            'Define static getDerivedStateFromError(error: Error) { return { hasError: true }; }',
+            'In render(), check if (this.state.hasError) return <div ...>Fallback</div>;',
+          ],
+          explanation: 'Error Boundaries guarantee fault isolation in production React architectures.',
+          testCases: [
+            {
+              description: 'Declares static getDerivedStateFromError',
+              validate: (code) => ({
+                passed: /static\s+getDerivedStateFromError/.test(code) && /hasError:\s*true/.test(code),
+                message: 'Implement static getDerivedStateFromError returning { hasError: true }',
+              }),
+            },
+            {
+              description: 'Renders fallback when this.state.hasError is true',
+              validate: (code) => ({
+                passed: /if\s*\(\s*this\.state\.hasError\s*\)/.test(code),
+                message: 'Conditionally return fallback UI when this.state.hasError is true',
+              }),
+            },
+          ],
+        },
+        appliedInApp: {
+          componentName: 'VideoModal.tsx',
+          filePath: '/components/VideoModal.tsx',
+          description: 'Video players and media widgets should be wrapped in Error Boundaries to gracefully handle decode failures.',
+        },
+      },
+      {
+        id: 'p3-m5-compound-patterns',
+        title: '5. Compound Component Patterns & Render Props',
+        slug: 'compound-components-render-props',
+        estimatedMinutes: 30,
+        theory: {
+          summary: 'Compound Components provide an intuitive, highly flexible component API where a group of components work together to share implicit state via an internal Context (e.g. <Tabs><Tabs.List /><Tabs.Panel /></Tabs>). This inverts control to the consumer without polluting props.',
+          corePrinciples: [
+            {
+              headline: 'Principle 1: Shared Implicit State via Context',
+              body: 'Instead of passing 10 props to a monolithic component (<Accordion items={...} onSelect={...} expandedIndex={...} />), a compound component shares state implicitly through a private React Context between <Accordion.Item> and <Accordion.Trigger>.',
+              pitfall: 'Passing down props through React.Children.map(): this only works for immediate direct children and breaks if the user wraps an item in a custom div.',
+            },
+            {
+              headline: 'Principle 2: Static Sub-Component Attachment',
+              body: 'Attach child components directly to the parent: Accordion.Item = AccordionItem; Accordion.Trigger = AccordionTrigger. This provides clear namespace grouping in JSX.',
+              pitfall: 'Forgetting to export sub-components or breaking TypeScript definitions.',
+            },
+            {
+              headline: 'Principle 3: The Render Props Pattern',
+              body: 'A render prop is a prop on a component whose value is a function that returns a JSX element. It allows sharing stateful logic (e.g. mouse position, hover status, or form state) while letting the parent dictate the exact markup rendered.',
+              pitfall: 'Using render props when custom hooks solve the problem with cleaner syntax: custom hooks have largely superseded render props, but compound components remain the industry standard for UI design systems.',
+            },
+          ],
+          codeExamples: [
+            {
+              title: 'Compound Accordion Component with Internal Context',
+              code: `import React, { createContext, useContext, useState } from 'react';
+
+// 1. Private Context
+interface AccordionContextType {
+  activeId: string | null;
+  toggleId: (id: string) => void;
+}
+const AccordionContext = createContext<AccordionContextType | null>(null);
+
+// 2. Root Component
+export function Accordion({ children, defaultActive }: { children: React.ReactNode; defaultActive?: string }) {
+  const [activeId, setActiveId] = useState<string | null>(defaultActive || null);
+  const toggleId = (id: string) => setActiveId(prev => (prev === id ? null : id));
+
+  return (
+    <AccordionContext.Provider value={{ activeId, toggleId }}>
+      <div className="space-y-2">{children}</div>
+    </AccordionContext.Provider>
+  );
+}
+
+// 3. Sub-Component: Item
+Accordion.Item = function AccordionItem({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+  const ctx = useContext(AccordionContext);
+  if (!ctx) throw new Error('Accordion.Item must be inside <Accordion>');
+  const isOpen = ctx.activeId === id;
+
+  return (
+    <div className="border rounded-xl overflow-hidden bg-white">
+      <button
+        onClick={() => ctx.toggleId(id)}
+        className="w-full p-3 text-left font-bold text-xs flex justify-between bg-neutral-50"
+      >
+        <span>{title}</span>
+        <span>{isOpen ? '▲' : '▼'}</span>
+      </button>
+      {isOpen && <div className="p-3 text-xs text-neutral-600">{children}</div>}
+    </div>
+  );
+};`,
+              explanation: 'Notice how the consumer can arrange Accordion.Item freely without managing active states or callback props manually.',
+            },
+          ],
+        },
+        playground: {
+          id: 'pg-p3-compound',
+          title: 'Compound Component Builder & Pattern Inspector',
+          description: 'Inspect the implicit state sharing inside a compound FAQ Accordion and Service Tabs system. Expand and collapse items to see how Context coordinates the children.',
+          type: 'compound-components-lab',
+          initialState: {
+            activeItemId: 'aeration',
+            activeTabId: 'spring',
+            items: [
+              { id: 'aeration', title: 'Why is hollow-tine aeration essential in Central Alberta?', content: 'Breaks up dense clay soil, allowing roots to penetrate 3x deeper.' },
+              { id: 'raking', title: 'When is the best week for spring power raking?', content: 'Early May once snowpack is 100% melted and soil surface is firm.' },
+              { id: 'snow', title: 'What snowfall triggers your winter team?', content: '2.5 cm fresh snow triggers automatic commercial and residential clearing.' },
+            ],
+          },
+        },
+        challenge: {
+          id: 'ch-p3-compound',
+          title: 'Challenge: Build a Compound Tabs Component with Shared Context',
+          instructions: 'Build a compound component "<Tabs>" with "<Tabs.List>" and "<Tabs.Tab value=...>" sharing active tab state implicitly through a Context.',
+          starterCode: `import React, { createContext, useContext, useState } from 'react';
+
+// TODO: Create TabsContext
+
+export function Tabs({ defaultValue, children }: any) {
+  // TODO: Implement root provider
+  return <div>{children}</div>;
+}
+
+Tabs.Tab = function Tab({ value, children }: any) {
+  // TODO: Consume TabsContext and render button with active style
+  return <button>{children}</button>;
+};`,
+          solutionCode: `import React, { createContext, useContext, useState } from 'react';
+
+interface TabsContextType {
+  activeTab: string;
+  setActiveTab: (val: string) => void;
+}
+const TabsContext = createContext<TabsContextType | null>(null);
+
+export function Tabs({ defaultValue, children }: any) {
+  const [activeTab, setActiveTab] = useState(defaultValue);
+  return (
+    <TabsContext.Provider value={{ activeTab, setActiveTab }}>
+      <div>{children}</div>
+    </TabsContext.Provider>
+  );
+}
+
+Tabs.Tab = function Tab({ value, children }: any) {
+  const ctx = useContext(TabsContext);
+  if (!ctx) throw new Error('Tabs.Tab must be inside <Tabs>');
+  const isActive = ctx.activeTab === value;
+  return (
+    <button
+      onClick={() => ctx.setActiveTab(value)}
+      className={isActive ? 'font-bold text-emerald-600' : 'text-neutral-500'}
+    >
+      {children}
+    </button>
+  );
+};`,
+          hints: [
+            'Create const TabsContext = createContext<TabsContextType | null>(null);',
+            'In Tabs, manage const [activeTab, setActiveTab] = useState(defaultValue); and provide it.',
+            'In Tabs.Tab, read ctx = useContext(TabsContext) and call ctx.setActiveTab(value) on click.',
+          ],
+          explanation: 'Compound Components empower developers to build accessible, composable design system primitives like shadcn/ui and Radix UI.',
+          testCases: [
+            {
+              description: 'Creates TabsContext and renders TabsContext.Provider',
+              validate: (code) => ({
+                passed: /createContext/.test(code) && /TabsContext\.Provider/.test(code),
+                message: 'Provide TabsContext via <TabsContext.Provider value=...>',
+              }),
+            },
+            {
+              description: 'Attaches Tabs.Tab sub-component that consumes context',
+              validate: (code) => ({
+                passed: /Tabs\.Tab\s*=/.test(code) && /useContext\(TabsContext\)/.test(code),
+                message: 'Implement Tabs.Tab consuming useContext(TabsContext)',
+              }),
+            },
+          ],
+        },
+        appliedInApp: {
+          componentName: 'Navbar.tsx',
+          filePath: '/components/Navbar.tsx',
+          description: 'Compound component patterns represent the architectural standard for accessible dropdowns and tabs.',
         },
       },
     ],

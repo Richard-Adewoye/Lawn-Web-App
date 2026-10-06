@@ -33,7 +33,12 @@ export interface PlaygroundConfig {
     | 'state-lifting-lab'
     | 'context-lab'
     | 'custom-hooks-lab'
-    | 'controlled-uncontrolled-lab';
+    | 'controlled-uncontrolled-lab'
+    | 'memo-benchmark-lab'
+    | 'lazy-suspense-lab'
+    | 'reducer-imperative-lab'
+    | 'error-boundary-lab'
+    | 'compound-components-lab';
   initialState: any;
 }
 

@@ -1011,6 +1011,290 @@ export function InteractivePlayground({ config }: InteractivePlaygroundProps) {
             </div>
           </div>
         )}
+
+        {/* 12. Phase 3: Memo Benchmark Lab */}
+        {config.type === 'memo-benchmark-lab' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 space-y-3">
+                <span className="text-xs font-bold text-white block">
+                  Parent State & Memoization Toggles
+                </span>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setCounter((c) => c + 1);
+                      if (!propsState.isAvailable) {
+                        setPropsState((p: any) => ({ ...p, price: (p.price || 0) + 1 }));
+                      }
+                    }}
+                    className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold cursor-pointer"
+                  >
+                    Rerender Parent (Tick #{counter})
+                  </button>
+                </div>
+
+                <div className="space-y-2 pt-1 text-xs">
+                  <div className="flex items-center justify-between p-2.5 bg-neutral-900 rounded-lg border border-neutral-800">
+                    <span className="text-neutral-300 font-semibold">Enable React.memo on Child:</span>
+                    <input
+                      type="checkbox"
+                      checked={propsState.isAvailable}
+                      onChange={(e) => setPropsState({ ...propsState, isAvailable: e.target.checked })}
+                      className="w-4 h-4 accent-emerald-500 cursor-pointer"
+                    />
+                  </div>
+
+                  <p className="text-[11px] text-neutral-400">
+                    {propsState.isAvailable
+                      ? '✓ React.memo active: Child compares props and SKIPS re-renders when parent ticks.'
+                      : '⚠️ React.memo OFF: Child re-renders on EVERY parent tick even though props are identical!'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Child Render Metrics */}
+              <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white">Child Row Component Metrics</span>
+                  <span className="font-mono text-emerald-400 text-xs font-bold">
+                    &lt;MemoizedServiceRow /&gt;
+                  </span>
+                </div>
+
+                <div className="p-3 bg-neutral-900 rounded-lg border border-neutral-800 space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">Child Render Count:</span>
+                    <span className="font-mono font-black text-amber-400">
+                      {propsState.isAvailable ? '1 (Skipped redundant renders)' : `${counter} (Re-rendered every tick!)`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">Referential Comparison:</span>
+                    <span className="font-mono text-emerald-300">
+                      {propsState.isAvailable ? 'prevProps === nextProps (true)' : 'No shallow comparison'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 13. Phase 3: Code Splitting & Suspense Lab */}
+        {config.type === 'lazy-suspense-lab' && (
+          <div className="space-y-4">
+            <div className="p-4 bg-neutral-950 rounded-xl border border-neutral-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-white block">
+                    Dynamic import() &amp; &lt;Suspense fallback=...&gt;
+                  </span>
+                  <span className="text-[11px] text-neutral-400">
+                    Simulate lazy loading a heavy 340KB 3D Yard Estimator chunk on demand.
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    setPreventDefaultEnabled(false);
+                    setTimeout(() => setPreventDefaultEnabled(true), 900);
+                  }}
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold cursor-pointer"
+                >
+                  Load Lazy Component Chunk
+                </button>
+              </div>
+
+              {/* Simulation Canvas */}
+              <div className="p-4 bg-neutral-900 rounded-xl border border-neutral-800 min-h-[140px] flex items-center justify-center">
+                {!preventDefaultEnabled ? (
+                  /* Suspense Skeleton Fallback */
+                  <div className="w-full max-w-md space-y-2.5 animate-pulse">
+                    <div className="flex items-center gap-2 text-xs text-amber-400 font-mono">
+                      <Sparkles className="w-4 h-4 animate-spin" />
+                      <span>&lt;Suspense fallback&gt;: Downloading lazy chunk over network...</span>
+                    </div>
+                    <div className="h-4 bg-neutral-800 rounded w-2/3" />
+                    <div className="h-12 bg-neutral-800 rounded w-full" />
+                  </div>
+                ) : (
+                  /* Loaded Chunk View */
+                  <div className="w-full text-center space-y-2 text-xs">
+                    <span className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 inline-flex items-center justify-center font-bold">
+                      ✓
+                    </span>
+                    <h5 className="font-bold text-white">3D Alberta Yard Visualizer Loaded!</h5>
+                    <p className="text-neutral-400 text-[11px]">
+                      Chunk (342 KB) resolved and hydrated via React.lazy without blocking initial page paint.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 14. Phase 3: useReducer State Machine Lab */}
+        {config.type === 'reducer-imperative-lab' && (
+          <div className="space-y-4">
+            <div className="p-4 bg-neutral-950 rounded-xl border border-neutral-800 space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-white">
+                  useReducer State Machine (Step {counter} of 3)
+                </span>
+                <span className="font-mono text-emerald-400 font-bold uppercase">
+                  Status: {counter === 3 ? 'Confirmed' : 'Draft'}
+                </span>
+              </div>
+
+              {/* State Machine Step Viewer */}
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { step: 1, title: '1. Lot Sizing' },
+                  { step: 2, title: '2. Services' },
+                  { step: 3, title: '3. Booking' },
+                ].map((s) => (
+                  <div
+                    key={s.step}
+                    className={`p-2.5 rounded-lg border text-center text-xs font-bold transition-all ${
+                      counter === s.step
+                        ? 'bg-emerald-950 border-emerald-500 text-emerald-200'
+                        : 'bg-neutral-900 border-neutral-800 text-neutral-500'
+                    }`}
+                  >
+                    {s.title}
+                  </div>
+                ))}
+              </div>
+
+              {/* Action Dispatch Buttons */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setCounter((c) => Math.max(1, c - 1))}
+                  disabled={counter === 1}
+                  className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 disabled:opacity-40 text-neutral-300 rounded-lg text-xs font-bold cursor-pointer"
+                >
+                  dispatch(&#123; type: &apos;PREV_STEP&apos; &#125;)
+                </button>
+                <button
+                  onClick={() => setCounter((c) => Math.min(3, c + 1))}
+                  disabled={counter === 3}
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white rounded-lg text-xs font-bold cursor-pointer"
+                >
+                  dispatch(&#123; type: &apos;NEXT_STEP&apos; &#125;)
+                </button>
+                <button
+                  onClick={() => setCounter(1)}
+                  className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-lg text-xs cursor-pointer ml-auto"
+                >
+                  dispatch(&#123; type: &apos;RESET&apos; &#125;)
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 15. Phase 3: Error Boundary Lab */}
+        {config.type === 'error-boundary-lab' && (
+          <div className="space-y-4">
+            <div className="p-4 bg-neutral-950 rounded-xl border border-neutral-800 space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-white">
+                  &lt;LawnBusterErrorBoundary&gt; Fault Isolation
+                </span>
+                <span className="text-[11px] text-neutral-400">
+                  componentDidCatch &amp; getDerivedStateFromError
+                </span>
+              </div>
+
+              <div className="p-4 bg-neutral-900 rounded-xl border border-neutral-800">
+                {preventDefaultEnabled ? (
+                  <div className="p-4 bg-red-950/40 border border-red-700/60 rounded-xl text-xs space-y-2 text-red-200">
+                    <div className="flex items-center gap-2 font-bold text-red-400">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span>Boundary Caught Render Crash: TypeError in WeatherWidget</span>
+                    </div>
+                    <p className="text-[11px] text-neutral-300">
+                      The crash was isolated to this single card. The rest of the app remained 100% interactive!
+                    </p>
+                    <button
+                      onClick={() => setPreventDefaultEnabled(false)}
+                      className="px-3 py-1 bg-red-700 hover:bg-red-600 text-white rounded text-xs font-bold cursor-pointer"
+                    >
+                      Retry &amp; Reset Boundary
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-neutral-300">
+                      Weather Radar Widget: Sunny 21°C · Sylvan Lake
+                    </span>
+                    <button
+                      onClick={() => setPreventDefaultEnabled(true)}
+                      className="px-3 py-1 bg-neutral-800 hover:bg-neutral-700 text-red-400 rounded text-xs font-bold cursor-pointer"
+                    >
+                      Trigger Simulated Crash
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 16. Phase 3: Compound Components Lab */}
+        {config.type === 'compound-components-lab' && (
+          <div className="space-y-4">
+            <div className="p-4 bg-neutral-950 rounded-xl border border-neutral-800 space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-white">
+                  Compound Component: &lt;Accordion&gt; &amp; &lt;Accordion.Item&gt;
+                </span>
+                <span className="text-neutral-400 text-[11px]">
+                  Implicit State Shared via Private Context
+                </span>
+              </div>
+
+              {/* Interactive Compound Items */}
+              <div className="space-y-2">
+                {[
+                  {
+                    id: 'aeration',
+                    title: 'Why is core aeration essential in Central Alberta?',
+                    content: 'Core aeration pulls 2.5-inch plugs to relieve compacted clay soil, allowing water, oxygen, and root nutrients to penetrate deep.',
+                  },
+                  {
+                    id: 'raking',
+                    title: 'When is the best week for spring power raking?',
+                    content: 'Early May once snowpack is completely melted and the turf surface has dried enough to prevent tearing root crowns.',
+                  },
+                ].map((item) => {
+                  const isOpen = seasonFilter === item.id;
+                  return (
+                    <div
+                      key={item.id}
+                      className="rounded-xl border border-neutral-800 overflow-hidden bg-neutral-900"
+                    >
+                      <button
+                        onClick={() => setSeasonFilter(isOpen ? '' : item.id)}
+                        className="w-full p-3 text-left font-bold text-xs flex items-center justify-between text-white hover:bg-neutral-800/60 cursor-pointer"
+                      >
+                        <span>&lt;Accordion.Trigger&gt;: {item.title}</span>
+                        <span className="text-emerald-400 font-mono">{isOpen ? '▲' : '▼'}</span>
+                      </button>
+                      {isOpen && (
+                        <div className="p-3 bg-neutral-950/80 text-xs text-neutral-300 border-t border-neutral-800">
+                          {item.content}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
