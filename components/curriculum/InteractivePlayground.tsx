@@ -597,6 +597,420 @@ export function InteractivePlayground({ config }: InteractivePlaygroundProps) {
             </div>
           </div>
         )}
+
+        {/* 6. Phase 2: Effects Lab */}
+        {config.type === 'effects-lab' && (
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white">Active Effect Simulator:</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold">
+                    Running in Browser
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs text-neutral-400 block">Simulated Dispatch Timer</span>
+                    <span className="text-xl font-mono font-black text-emerald-400">
+                      Elapsed: {counter}s
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCounter((c) => c + 1)}
+                      className="px-2.5 py-1 bg-emerald-700 text-white rounded text-xs font-bold cursor-pointer"
+                    >
+                      + Tick
+                    </button>
+                    <button
+                      onClick={() => setCounter(0)}
+                      className="px-2 py-1 bg-neutral-800 text-neutral-300 rounded text-xs cursor-pointer"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 text-xs text-neutral-300">
+                  <span className="font-bold text-neutral-400 block text-[10px] uppercase tracking-wider">
+                    Experiment Controls:
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() =>
+                        logEvent(
+                          'cleanup',
+                          'useEffect',
+                          'Cleanup callback executed! Destroyed previous interval before unmount.'
+                        )
+                      }
+                      className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 rounded-lg text-xs cursor-pointer"
+                    >
+                      Simulate Component Unmount
+                    </button>
+                    <button
+                      onClick={() =>
+                        logEvent(
+                          'mount',
+                          'useEffect',
+                          'Effect executed on mount: interval initialized with 1000ms delay.'
+                        )
+                      }
+                      className="px-3 py-1.5 bg-emerald-950 border border-emerald-700 rounded-lg text-xs text-emerald-300 cursor-pointer"
+                    >
+                      Simulate Re-mount
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Real-time effect lifecycle log */}
+              <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 space-y-2 font-mono text-[11px]">
+                <span className="text-[10px] font-sans font-bold text-neutral-400 uppercase tracking-wider block">
+                  useEffect Execution & Cleanup Log:
+                </span>
+                <div className="space-y-1.5">
+                  <div className="p-2 rounded bg-neutral-900 border border-neutral-800 text-emerald-400">
+                    [Render Phase]: DOM painted.
+                  </div>
+                  <div className="p-2 rounded bg-neutral-900 border border-neutral-800 text-white">
+                    [Effect Phase]: intervalId = setInterval(..., 1000) active.
+                  </div>
+                  <div className="p-2 rounded bg-neutral-900 border border-neutral-800 text-amber-400">
+                    [Cleanup Phase]: return () =&gt; clearInterval(intervalId) registered.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 7. Phase 2: Refs & DOM Lab */}
+        {config.type === 'refs-dom-lab' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 space-y-3">
+                <span className="text-xs font-bold text-white block">
+                  Imperative DOM Manipulation via inputRef.current
+                </span>
+
+                <div>
+                  <label className="text-[11px] text-neutral-400 block mb-1">
+                    Direct HTMLInputElement:
+                  </label>
+                  <input
+                    id="lab-dom-input"
+                    type="text"
+                    defaultValue="42 Lakeshore Dr, Sylvan Lake, AB"
+                    className="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg text-xs text-white focus:outline-emerald-500 font-mono"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <button
+                    onClick={() => {
+                      const el = document.getElementById('lab-dom-input') as HTMLInputElement;
+                      el?.focus();
+                    }}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold cursor-pointer"
+                  >
+                    inputRef.current.focus()
+                  </button>
+                  <button
+                    onClick={() => {
+                      const el = document.getElementById('lab-dom-input') as HTMLInputElement;
+                      el?.select();
+                    }}
+                    className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-lg text-xs font-bold cursor-pointer"
+                  >
+                    inputRef.current.select()
+                  </button>
+                  <button
+                    onClick={() => {
+                      const el = document.getElementById('lab-dom-input') as HTMLInputElement;
+                      if (el) el.value = '';
+                    }}
+                    className="px-3 py-1.5 bg-red-950 hover:bg-red-900 text-red-200 border border-red-800 rounded-lg text-xs cursor-pointer"
+                  >
+                    Clear DOM Directly
+                  </button>
+                </div>
+              </div>
+
+              {/* Mutable value ref without re-renders */}
+              <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white">
+                    Mutable Ref vs useState Comparison
+                  </span>
+                  <span className="font-mono text-emerald-400 text-xs font-bold">
+                    useRef.current
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-lg bg-neutral-900 border border-neutral-800 space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">Component Render Count:</span>
+                    <span className="font-mono font-bold text-amber-400">1 (Unchanged by ref mutations!)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">Stored Interval ID in ref:</span>
+                    <span className="font-mono text-neutral-300">#4021</span>
+                  </div>
+                  <p className="text-[11px] text-neutral-400 leading-relaxed pt-1">
+                    When you mutate <code>ref.current = value</code>, React does NOT trigger a re-render. It is perfect for timer IDs and render profiling.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 8. Phase 2: State Lifting Lab */}
+        {config.type === 'state-lifting-lab' && (
+          <div className="space-y-4">
+            <div className="p-4 bg-neutral-950 rounded-xl border border-neutral-800 space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-white flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                  Parent Coordinator: &lt;YardQuoterCoordinator /&gt;
+                </span>
+                <span className="text-neutral-400 font-mono">
+                  Lifted State: lotSize = &quot;{propsState.variant}&quot;
+                </span>
+              </div>
+
+              {/* Visual Component Tree with arrows */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                {/* Child A (Selector) */}
+                <div className="p-4 rounded-xl bg-neutral-900 border border-neutral-800 space-y-2">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-bold text-emerald-400">Sibling A: &lt;LotSelector /&gt;</span>
+                    <span className="text-neutral-500">Sends Event Up ↑</span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {['standard', 'large', 'acreage'].map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => setPropsState({ ...propsState, variant: size })}
+                        className={`px-3 py-1.5 rounded-lg text-xs capitalize font-bold transition-colors cursor-pointer ${
+                          propsState.variant === size
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-neutral-950 text-neutral-400 hover:text-white border border-neutral-800'
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Child B (Summary) */}
+                <div className="p-4 rounded-xl bg-neutral-900 border border-neutral-800 space-y-2">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-bold text-amber-400">Sibling B: &lt;LiveEstimateBadge /&gt;</span>
+                    <span className="text-neutral-500">Receives Prop Down ↓</span>
+                  </div>
+                  <div className="p-2.5 bg-neutral-950 rounded-lg border border-neutral-800 flex items-center justify-between text-xs">
+                    <span className="text-neutral-400 capitalize">{propsState.variant} Lot Rate:</span>
+                    <span className="text-lg font-black text-emerald-400 font-mono">
+                      ${propsState.variant === 'standard' ? 45 : propsState.variant === 'large' ? 65 : 120} CAD
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 9. Phase 2: Context API Lab */}
+        {config.type === 'context-lab' && (
+          <div className="space-y-4">
+            {/* Provider Root Controller */}
+            <div className="p-4 bg-neutral-950 rounded-xl border border-neutral-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                  &lt;BranchContext.Provider value=&#123;activeBranch&#125;&gt;
+                </span>
+                <span className="text-xs text-neutral-400">No prop drilling!</span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-neutral-400">Switch Alberta Branch:</span>
+                {['Sylvan Lake', 'Red Deer', 'Lacombe', 'Blackfalds'].map((city) => (
+                  <button
+                    key={city}
+                    onClick={() => setEventInput(city)}
+                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      eventInput === city
+                        ? 'bg-[#bef264] text-[#0f2319] shadow-sm'
+                        : 'bg-neutral-900 text-neutral-300 hover:text-white border border-neutral-800'
+                    }`}
+                  >
+                    📍 {city}
+                  </button>
+                ))}
+              </div>
+
+              {/* 3 Consumers */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                <div className="p-3 bg-neutral-900 rounded-xl border border-neutral-800 text-xs">
+                  <span className="text-[10px] text-neutral-500 font-bold block mb-1">
+                    Consumer 1: Header Badge
+                  </span>
+                  <div className="text-white font-bold">{eventInput} Main HQ</div>
+                  <span className="text-neutral-400 text-[11px] block mt-0.5">
+                    {eventInput === 'Red Deer' ? '+1 (403) 346-0000' : '+1 (780) 782-9393'}
+                  </span>
+                </div>
+
+                <div className="p-3 bg-neutral-900 rounded-xl border border-neutral-800 text-xs">
+                  <span className="text-[10px] text-neutral-500 font-bold block mb-1">
+                    Consumer 2: Local Quoter
+                  </span>
+                  <div className="text-emerald-400 font-bold">{eventInput} Resident Rate</div>
+                  <span className="text-neutral-400 text-[11px] block mt-0.5">5% Alberta GST</span>
+                </div>
+
+                <div className="p-3 bg-neutral-900 rounded-xl border border-neutral-800 text-xs">
+                  <span className="text-[10px] text-neutral-500 font-bold block mb-1">
+                    Consumer 3: Winter Dispatch
+                  </span>
+                  <div className="text-amber-400 font-bold">Guaranteed 24h Trigger</div>
+                  <span className="text-neutral-400 text-[11px] block mt-0.5">Within {eventInput} limits</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 10. Phase 2: Custom Hooks Lab */}
+        {config.type === 'custom-hooks-lab' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* useLocalStorage Simulator */}
+              <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white">useLocalStorage(&apos;lawn_notes&apos;)</span>
+                  <span className="text-[10px] bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded font-mono">
+                    Persistent Storage
+                  </span>
+                </div>
+
+                <div>
+                  <label className="text-[11px] text-neutral-400 block mb-1">
+                    Yard Special Instructions (Auto-saved):
+                  </label>
+                  <textarea
+                    value={eventInput}
+                    onChange={(e) => setEventInput(e.target.value)}
+                    rows={3}
+                    className="w-full p-2.5 bg-neutral-900 border border-neutral-700 rounded-lg text-xs text-white"
+                  />
+                </div>
+
+                <div className="p-2.5 rounded bg-neutral-900 text-[11px] font-mono text-neutral-400">
+                  localStorage[&apos;lawn_notes&apos;] = &quot;{eventInput}&quot;
+                </div>
+              </div>
+
+              {/* useDebounce Simulator */}
+              <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white">useDebounce(search, 300ms)</span>
+                  <span className="text-[10px] bg-amber-950 text-amber-300 px-2 py-0.5 rounded font-mono">
+                    Rate Limiter
+                  </span>
+                </div>
+
+                <div>
+                  <label className="text-[11px] text-neutral-400 block mb-1">
+                    Type fast in Search Input:
+                  </label>
+                  <input
+                    type="text"
+                    value={selectedServiceEvent}
+                    onChange={(e) => setSelectedServiceEvent(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-neutral-900 border border-neutral-700 rounded-lg text-xs text-white"
+                  />
+                </div>
+
+                <div className="p-2.5 rounded bg-neutral-900 text-xs space-y-1">
+                  <div className="flex justify-between text-neutral-400">
+                    <span>Raw Input Keystroke:</span>
+                    <span className="font-mono text-white">&quot;{selectedServiceEvent}&quot;</span>
+                  </div>
+                  <div className="flex justify-between text-neutral-400">
+                    <span>Debounced API Trigger:</span>
+                    <span className="font-mono text-emerald-400">&quot;{selectedServiceEvent}&quot;</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 11. Phase 2: Controlled vs Uncontrolled Lab */}
+        {config.type === 'controlled-uncontrolled-lab' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Controlled Form */}
+              <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white">Controlled Form</span>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-mono font-bold">
+                    value + onChange
+                  </span>
+                </div>
+
+                <div>
+                  <label className="text-[11px] text-neutral-400 block mb-1">Postal Code (Instant formatting):</label>
+                  <input
+                    type="text"
+                    value={eventInput}
+                    onChange={(e) => {
+                      setEventInput(e.target.value.toUpperCase());
+                      setCounter((c) => c + 1); // Track render
+                    }}
+                    placeholder="e.g. T4S 1Z5"
+                    className="w-full px-3 py-1.5 bg-neutral-900 border border-neutral-700 rounded-lg text-xs text-white uppercase font-mono"
+                  />
+                </div>
+
+                <div className="p-2.5 bg-neutral-900 rounded-lg text-[11px] text-neutral-400 flex items-center justify-between">
+                  <span>Keystroke Render Count:</span>
+                  <span className="font-mono font-bold text-emerald-400">{counter} renders</span>
+                </div>
+              </div>
+
+              {/* Uncontrolled Form */}
+              <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white">Uncontrolled Form</span>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-mono font-bold">
+                    defaultValue + FormData
+                  </span>
+                </div>
+
+                <div>
+                  <label className="text-[11px] text-neutral-400 block mb-1">Client Address (Zero typing re-renders):</label>
+                  <input
+                    defaultValue="102 50th Street, Sylvan Lake, AB"
+                    className="w-full px-3 py-1.5 bg-neutral-900 border border-neutral-700 rounded-lg text-xs text-white font-mono"
+                  />
+                </div>
+
+                <div className="p-2.5 bg-neutral-900 rounded-lg text-[11px] text-neutral-400 flex items-center justify-between">
+                  <span>Keystroke Render Count:</span>
+                  <span className="font-mono font-bold text-amber-400">0 (DOM stores value)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

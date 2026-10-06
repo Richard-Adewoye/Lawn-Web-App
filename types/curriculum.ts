@@ -22,7 +22,18 @@ export interface PlaygroundConfig {
   id: string;
   title: string;
   description: string;
-  type: 'jsx-expressions' | 'props-explorer' | 'state-sandbox' | 'events-lab' | 'lists-conditionals';
+  type:
+    | 'jsx-expressions'
+    | 'props-explorer'
+    | 'state-sandbox'
+    | 'events-lab'
+    | 'lists-conditionals'
+    | 'effects-lab'
+    | 'refs-dom-lab'
+    | 'state-lifting-lab'
+    | 'context-lab'
+    | 'custom-hooks-lab'
+    | 'controlled-uncontrolled-lab';
   initialState: any;
 }
 
