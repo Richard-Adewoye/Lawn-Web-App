@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Play,
   RotateCcw,
@@ -13,6 +13,13 @@ import {
   Plus,
   Trash2,
   Zap,
+  Wifi,
+  Ban,
+  RefreshCw,
+  FileText,
+  Check,
+  X,
+  ShieldCheck,
 } from 'lucide-react';
 import { PlaygroundConfig } from '@/types/curriculum';
 
@@ -65,6 +72,147 @@ export function InteractivePlayground({ config }: InteractivePlaygroundProps) {
       note,
     };
     setEventLogs((prev) => [entry, ...prev.slice(0, 5)]);
+  };
+
+  // Phase 4 Lab 1: Data Fetching & AbortController state
+  const [fetchLocation, setFetchLocation] = useState('Sylvan Lake');
+  const [fetchLatency, setFetchLatency] = useState(800);
+  const [simulateFetchError, setSimulateFetchError] = useState(false);
+  const [isFetchingData, setIsFetchingData] = useState(false);
+  const [fetchErrorMsg, setFetchErrorMsg] = useState<string | null>(null);
+  const [fetchedLawnData, setFetchedLawnData] = useState<{
+    location: string;
+    temperature: string;
+    crewsActive: number;
+    nextAvailableSlot: string;
+    soilReadiness: string;
+  } | null>({
+    location: 'Sylvan Lake',
+    temperature: '18°C Sunny',
+    crewsActive: 4,
+    nextAvailableSlot: 'Tomorrow 9:00 AM',
+    soilReadiness: 'Optimal (Thawed & Firm)',
+  });
+  const [abortControllerLogs, setAbortControllerLogs] = useState<string[]>([
+    'Initialized AbortController signal listener on mount',
+  ]);
+  const activeAbortRef = React.useRef<{ abort: () => void; id: number } | null>(null);
+  const fetchCounterRef = React.useRef(1);
+
+  const triggerSimulatedFetch = (targetLoc: string, delayMs = fetchLatency, forceError = simulateFetchError) => {
+    setFetchLocation(targetLoc);
+    setIsFetchingData(true);
+    setFetchErrorMsg(null);
+
+    const thisReqId = fetchCounterRef.current++;
+
+    if (activeAbortRef.current) {
+      activeAbortRef.current.abort();
+      setAbortControllerLogs((prev) => [
+        `🚫 [AbortController] Aborted pending Request #${activeAbortRef.current?.id} because Request #${thisReqId} (${targetLoc}) took priority!`,
+        ...prev.slice(0, 4),
+      ]);
+    }
+
+    let isAborted = false;
+    const abortFn = () => {
+      isAborted = true;
+    };
+    activeAbortRef.current = { abort: abortFn, id: thisReqId };
+
+    setAbortControllerLogs((prev) => [
+      `📡 [HTTP GET] Dispatched Request #${thisReqId} -> /api/availability?loc=${targetLoc} (Latency: ${delayMs}ms)`,
+      ...prev.slice(0, 4),
+    ]);
+
+    setTimeout(() => {
+      if (isAborted) {
+        return;
+      }
+      setIsFetchingData(false);
+      activeAbortRef.current = null;
+
+      if (forceError) {
+        setFetchErrorMsg(`500 Server Error: Central Alberta weather radar timeout for ${targetLoc}`);
+        setAbortControllerLogs((prev) => [
+          `❌ [HTTP 500] Request #${thisReqId} failed with server error! Caught in try/catch block.`,
+          ...prev.slice(0, 4),
+        ]);
+      } else {
+        setFetchedLawnData({
+          location: targetLoc,
+          temperature: targetLoc === 'Red Deer' ? '20°C Mild Breeze' : targetLoc === 'Lacombe' ? '17°C Overcast' : '19°C Clear Skies',
+          crewsActive: targetLoc === 'Red Deer' ? 6 : targetLoc === 'Lacombe' ? 2 : 4,
+          nextAvailableSlot: targetLoc === 'Red Deer' ? 'Today 2:30 PM' : 'Tomorrow 10:00 AM',
+          soilReadiness: 'Prime for Aeration & Mowing',
+        });
+        setAbortControllerLogs((prev) => [
+          `✅ [HTTP 200] Request #${thisReqId} delivered fresh state for ${targetLoc} in ${delayMs}ms!`,
+          ...prev.slice(0, 4),
+        ]);
+      }
+    }, delayMs);
+  };
+
+  // Phase 4 Lab 2: Form Handling & Validation state
+  const [formVals, setFormVals] = useState({
+    fullName: '',
+    phone: '',
+    lotSqFt: 2500,
+    serviceType: 'power-raking',
+  });
+  const [formTouched, setFormTouched] = useState<Record<string, boolean>>({});
+  const [formSubmitted, setFormSubmitted] = useState(false);
+
+  const formValidationErrors = useMemo(() => {
+    const errs: Record<string, string> = {};
+    if (!formVals.fullName.trim()) {
+      errs.fullName = 'Full client name is required';
+    } else if (formVals.fullName.trim().length < 3) {
+      errs.fullName = 'Name must be at least 3 characters';
+    }
+
+    const phoneRegex = /^[0-9\-\(\)\s]{10,14}$/;
+    if (!formVals.phone.trim()) {
+      errs.phone = 'Alberta contact phone is required';
+    } else if (!phoneRegex.test(formVals.phone)) {
+      errs.phone = 'Invalid phone format (e.g. 403-555-0192)';
+    }
+
+    if (formVals.lotSqFt < 500) {
+      errs.lotSqFt = 'Minimum lot size must be at least 500 sq ft';
+    }
+    return errs;
+  }, [formVals]);
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormTouched({ fullName: true, phone: true, lotSqFt: true, serviceType: true });
+    if (Object.keys(formValidationErrors).length === 0) {
+      setFormSubmitted(true);
+    }
+  };
+
+  // Phase 4 Lab 3: RTL Testing Suite state
+  const [rtlTestRunning, setRtlTestRunning] = useState(false);
+  const [rtlBookCount, setRtlBookCount] = useState(0);
+  const [rtlServiceBooked, setRtlServiceBooked] = useState(false);
+  const [rtlIsSubmitting, setRtlIsSubmitting] = useState(false);
+  const [rtlTestResults, setRtlTestResults] = useState<
+    { id: string; name: string; query: string; status: 'passed' | 'failed' | 'idle'; ms: number }[]
+  >([
+    { id: 't1', name: 'renders accessible service button by role', query: 'screen.getByRole("button", { name: /power raking/i })', status: 'idle', ms: 4 },
+    { id: 't2', name: 'verifies price is displayed in CAD currency', query: 'screen.getByText(/\\$89 CAD/i)', status: 'idle', ms: 2 },
+    { id: 't3', name: 'triggers onBook callback with service ID on click', query: 'fireEvent.click(screen.getByRole("button"))', status: 'idle', ms: 8 },
+    { id: 't4', name: 'renders loading state and disables button during submit', query: 'expect(button).toBeDisabled()', status: 'idle', ms: 5 },
+  ]);
+
+  const runRtlTestSuite = () => {
+    setRtlTestRunning(true);
+    setTimeout(() => {
+      setRtlTestResults((prev) => prev.map((t) => ({ ...t, status: 'passed' })));
+      setRtlTestRunning(false);
+    }, 600);
   };
 
   // State batching experiment
@@ -1291,6 +1439,454 @@ export function InteractivePlayground({ config }: InteractivePlaygroundProps) {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 17. Phase 4: Data Fetching & AbortController Lab */}
+        {config.type === 'data-fetching-lab' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              {/* Controls Column */}
+              <div className="lg:col-span-5 bg-neutral-950 p-4 rounded-xl border border-neutral-800 space-y-3">
+                <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">
+                  Network Request Dispatcher
+                </span>
+
+                <div>
+                  <label className="text-[11px] text-neutral-400 block mb-1">
+                    Select Location (Triggers Fetch):
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {['Sylvan Lake', 'Red Deer', 'Lacombe'].map((loc) => (
+                      <button
+                        key={loc}
+                        onClick={() => triggerSimulatedFetch(loc)}
+                        className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          fetchLocation === loc
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-neutral-900 text-neutral-300 hover:bg-neutral-800 border border-neutral-800'
+                        }`}
+                      >
+                        {loc}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Rapid Query Burst Button to demo AbortController */}
+                <div className="p-3 bg-neutral-900 rounded-xl border border-neutral-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-300 flex items-center gap-1">
+                      <Zap className="w-3.5 h-3.5" /> Race Condition Simulator
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-neutral-400">
+                    Click to dispatch 3 rapid sequential queries. Watch AbortController instantly cancel queries #1 and #2 so query #3 wins!
+                  </p>
+                  <button
+                    onClick={() => {
+                      triggerSimulatedFetch('Sylvan Lake', 1200);
+                      setTimeout(() => triggerSimulatedFetch('Red Deer', 900), 150);
+                      setTimeout(() => triggerSimulatedFetch('Lacombe', 400), 300);
+                    }}
+                    className="w-full py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                  >
+                    🚀 Trigger Rapid Query Burst (3x)
+                  </button>
+                </div>
+
+                {/* Toggles */}
+                <div className="space-y-2 pt-1 border-t border-neutral-800/80">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-neutral-300">Simulate 500 Network Error</span>
+                    <input
+                      type="checkbox"
+                      checked={simulateFetchError}
+                      onChange={(e) => setSimulateFetchError(e.target.checked)}
+                      className="w-4 h-4 accent-red-500 rounded cursor-pointer"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-[11px] text-neutral-400 mb-1">
+                      <span>Simulated Latency</span>
+                      <span className="font-mono text-emerald-400">{fetchLatency}ms</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="200"
+                      max="2000"
+                      step="100"
+                      value={fetchLatency}
+                      onChange={(e) => setFetchLatency(Number(e.target.value))}
+                      className="w-full accent-emerald-500 cursor-pointer"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Live UI State & Cancellation Log Column */}
+              <div className="lg:col-span-7 space-y-3">
+                {/* Visual Component Under Test */}
+                <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800">
+                  <div className="flex items-center justify-between mb-3 text-xs">
+                    <span className="font-bold text-white flex items-center gap-1.5">
+                      <Wifi className="w-3.5 h-3.5 text-emerald-400" />
+                      Lawn Crew Live Radar: {fetchLocation}
+                    </span>
+                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
+                      isFetchingData
+                        ? 'bg-amber-500/20 text-amber-300 animate-pulse'
+                        : fetchErrorMsg
+                        ? 'bg-red-500/20 text-red-300'
+                        : 'bg-emerald-500/20 text-emerald-300'
+                    }`}>
+                      {isFetchingData ? 'STATUS: FETCHING...' : fetchErrorMsg ? 'STATUS: ERROR' : 'STATUS: SYNCED'}
+                    </span>
+                  </div>
+
+                  {/* Tri-state UI renderer */}
+                  {isFetchingData ? (
+                    <div className="p-5 rounded-xl bg-neutral-900 border border-neutral-800 animate-pulse space-y-2.5">
+                      <div className="h-4 bg-neutral-800 rounded w-1/3" />
+                      <div className="h-3 bg-neutral-800 rounded w-2/3" />
+                      <div className="h-8 bg-neutral-800 rounded w-full" />
+                    </div>
+                  ) : fetchErrorMsg ? (
+                    <div className="p-4 rounded-xl bg-red-950/40 border border-red-700/60 text-xs text-red-200 space-y-2">
+                      <div className="flex items-center gap-2 font-bold text-red-400">
+                        <AlertTriangle className="w-4 h-4" />
+                        <span>Failed to fetch location schedule</span>
+                      </div>
+                      <p className="text-[11px] text-neutral-300">{fetchErrorMsg}</p>
+                      <button
+                        onClick={() => triggerSimulatedFetch(fetchLocation, fetchLatency, false)}
+                        className="px-3 py-1 bg-red-700 hover:bg-red-600 text-white rounded text-xs font-bold cursor-pointer"
+                      >
+                        Retry Request
+                      </button>
+                    </div>
+                  ) : fetchedLawnData ? (
+                    <div className="p-4 rounded-xl bg-neutral-900 border border-emerald-900/40 text-xs space-y-3">
+                      <div className="grid grid-cols-2 gap-2 text-[11px]">
+                        <div className="p-2 bg-neutral-950 rounded-lg border border-neutral-800">
+                          <span className="text-neutral-500 block text-[10px]">Conditions</span>
+                          <span className="font-bold text-white">{fetchedLawnData.temperature}</span>
+                        </div>
+                        <div className="p-2 bg-neutral-950 rounded-lg border border-neutral-800">
+                          <span className="text-neutral-500 block text-[10px]">Active Crews</span>
+                          <span className="font-bold text-emerald-400">{fetchedLawnData.crewsActive} Dispatched</span>
+                        </div>
+                        <div className="p-2 bg-neutral-950 rounded-lg border border-neutral-800">
+                          <span className="text-neutral-500 block text-[10px]">Earliest Booking</span>
+                          <span className="font-bold text-white">{fetchedLawnData.nextAvailableSlot}</span>
+                        </div>
+                        <div className="p-2 bg-neutral-950 rounded-lg border border-neutral-800">
+                          <span className="text-neutral-500 block text-[10px]">Soil Status</span>
+                          <span className="font-bold text-amber-300">{fetchedLawnData.soilReadiness}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* AbortController Real-Time Activity Log */}
+                <div className="bg-neutral-950 p-3.5 rounded-xl border border-neutral-800 space-y-1.5 font-mono text-[11px]">
+                  <div className="flex items-center justify-between text-neutral-400 text-[10px] font-sans font-bold">
+                    <span>AbortController Telemetry Log</span>
+                    <span className="text-emerald-400">Web API signal</span>
+                  </div>
+                  <div className="space-y-1 max-h-36 overflow-y-auto">
+                    {abortControllerLogs.map((log, i) => (
+                      <div
+                        key={i}
+                        className={`p-1.5 rounded text-[10px] ${
+                          log.includes('🚫')
+                            ? 'bg-amber-950/40 text-amber-300 border border-amber-800/50'
+                            : log.includes('❌')
+                            ? 'bg-red-950/40 text-red-300'
+                            : log.includes('✅')
+                            ? 'bg-emerald-950/40 text-emerald-300'
+                            : 'bg-neutral-900 text-neutral-400'
+                        }`}
+                      >
+                        {log}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 18. Phase 4: Form Validation Lab */}
+        {config.type === 'form-validation-lab' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              {/* Form Input Column */}
+              <div className="lg:col-span-6 bg-neutral-950 p-5 rounded-xl border border-neutral-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-emerald-400" />
+                    Quote Submission Form
+                  </span>
+                  <span className="text-[10px] text-neutral-400">
+                    Touched &amp; Blur Validation
+                  </span>
+                </div>
+
+                <form onSubmit={handleFormSubmit} className="space-y-3">
+                  {/* Full Name Field */}
+                  <div>
+                    <label className="text-[11px] text-neutral-300 font-semibold block mb-1">
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Liam MacDonald"
+                      value={formVals.fullName}
+                      onChange={(e) => setFormVals({ ...formVals, fullName: e.target.value })}
+                      onBlur={() => setFormTouched((prev) => ({ ...prev, fullName: true }))}
+                      className={`w-full px-3 py-1.5 rounded-lg text-xs bg-neutral-900 text-white border transition-colors ${
+                        formTouched.fullName && formValidationErrors.fullName
+                          ? 'border-red-500 bg-red-950/20'
+                          : formTouched.fullName && !formValidationErrors.fullName
+                          ? 'border-emerald-500'
+                          : 'border-neutral-800'
+                      }`}
+                    />
+                    {formTouched.fullName && formValidationErrors.fullName && (
+                      <p className="text-[10px] text-red-400 mt-1 flex items-center gap-1">
+                        <X className="w-3 h-3" /> {formValidationErrors.fullName}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Phone Field */}
+                  <div>
+                    <label className="text-[11px] text-neutral-300 font-semibold block mb-1">
+                      Alberta Phone Number *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="403-555-0192"
+                      value={formVals.phone}
+                      onChange={(e) => setFormVals({ ...formVals, phone: e.target.value })}
+                      onBlur={() => setFormTouched((prev) => ({ ...prev, phone: true }))}
+                      className={`w-full px-3 py-1.5 rounded-lg text-xs bg-neutral-900 text-white border transition-colors ${
+                        formTouched.phone && formValidationErrors.phone
+                          ? 'border-red-500 bg-red-950/20'
+                          : formTouched.phone && !formValidationErrors.phone
+                          ? 'border-emerald-500'
+                          : 'border-neutral-800'
+                      }`}
+                    />
+                    {formTouched.phone && formValidationErrors.phone && (
+                      <p className="text-[10px] text-red-400 mt-1 flex items-center gap-1">
+                        <X className="w-3 h-3" /> {formValidationErrors.phone}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Lot Size Field */}
+                  <div>
+                    <div className="flex justify-between text-[11px] text-neutral-300 mb-1">
+                      <span className="font-semibold">Lot Size (sq ft)</span>
+                      <span className="font-mono text-emerald-400">{formVals.lotSqFt.toLocaleString()} sq ft</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="200"
+                      max="8000"
+                      step="100"
+                      value={formVals.lotSqFt}
+                      onChange={(e) => setFormVals({ ...formVals, lotSqFt: Number(e.target.value) })}
+                      onBlur={() => setFormTouched((prev) => ({ ...prev, lotSqFt: true }))}
+                      className="w-full accent-emerald-500 cursor-pointer"
+                    />
+                    {formTouched.lotSqFt && formValidationErrors.lotSqFt && (
+                      <p className="text-[10px] text-red-400 mt-1 flex items-center gap-1">
+                        <X className="w-3 h-3" /> {formValidationErrors.lotSqFt}
+                      </p>
+                    )}
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-md mt-2"
+                  >
+                    Submit Booking Request
+                  </button>
+                </form>
+
+                {formSubmitted && (
+                  <div className="p-3 bg-emerald-950/50 border border-emerald-500/50 rounded-xl text-xs text-emerald-200 flex items-center gap-2 animate-in fade-in">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Booking passed schema validation and was successfully submitted!</span>
+                  </div>
+                )}
+              </div>
+
+              {/* State Inspector Column */}
+              <div className="lg:col-span-6 bg-neutral-950 p-4 rounded-xl border border-neutral-800 space-y-3 font-mono text-[11px]">
+                <div className="flex items-center justify-between text-neutral-400 text-[10px] font-sans font-bold">
+                  <span>Form State Inspector (Values, Touched &amp; Errors)</span>
+                  <span className="text-amber-400">Pure Validation Pattern</span>
+                </div>
+
+                <div className="space-y-2 text-[10px]">
+                  <div className="p-2.5 bg-neutral-900 rounded-lg border border-neutral-800">
+                    <span className="text-neutral-500 block mb-1 font-bold text-[9px] uppercase">
+                      values:
+                    </span>
+                    <pre className="text-emerald-400 overflow-x-auto">
+                      {JSON.stringify(formVals, null, 2)}
+                    </pre>
+                  </div>
+
+                  <div className="p-2.5 bg-neutral-900 rounded-lg border border-neutral-800">
+                    <span className="text-neutral-500 block mb-1 font-bold text-[9px] uppercase">
+                      touched:
+                    </span>
+                    <pre className="text-amber-300 overflow-x-auto">
+                      {JSON.stringify(formTouched, null, 2)}
+                    </pre>
+                  </div>
+
+                  <div className="p-2.5 bg-neutral-900 rounded-lg border border-neutral-800">
+                    <span className="text-neutral-500 block mb-1 font-bold text-[9px] uppercase">
+                      errors:
+                    </span>
+                    <pre className="text-red-300 overflow-x-auto">
+                      {JSON.stringify(formValidationErrors, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 19. Phase 4: React Testing Library Lab */}
+        {config.type === 'testing-rtl-lab' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              {/* Component Under Test Column */}
+              <div className="lg:col-span-5 bg-neutral-950 p-4 rounded-xl border border-neutral-800 space-y-3">
+                <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">
+                  Component Under Test: &lt;ServiceQuoteCard /&gt;
+                </span>
+
+                <div className="p-4 bg-white text-neutral-900 rounded-xl shadow-sm border border-neutral-200 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                      Central Alberta Special
+                    </span>
+                    <span className="text-xs text-neutral-500">In Stock</span>
+                  </div>
+
+                  <div>
+                    <h4 className="font-black text-sm text-neutral-900">Spring Power Raking</h4>
+                    <p className="text-xs text-neutral-600">Removes lawn thatch and dead turf needles.</p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
+                    <span className="text-sm font-black text-neutral-900">$89 CAD</span>
+                    <button
+                      onClick={() => {
+                        setRtlIsSubmitting(true);
+                        setTimeout(() => {
+                          setRtlIsSubmitting(false);
+                          setRtlServiceBooked(true);
+                          setRtlBookCount((c) => c + 1);
+                        }, 500);
+                      }}
+                      disabled={rtlIsSubmitting}
+                      className="px-3.5 py-1.5 rounded-full bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-xs font-bold cursor-pointer flex items-center gap-1.5"
+                    >
+                      {rtlIsSubmitting ? (
+                        <>
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                          <span>Processing...</span>
+                        </>
+                      ) : rtlServiceBooked ? (
+                        <>
+                          <Check className="w-3 h-3" />
+                          <span>Booked! ({rtlBookCount})</span>
+                        </>
+                      ) : (
+                        <span>Book Power Raking</span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-neutral-900 rounded-xl border border-neutral-800 text-[11px] space-y-1">
+                  <span className="font-bold text-white block">Accessibility Roles Exposed:</span>
+                  <div className="text-neutral-400 font-mono text-[10px] space-y-0.5">
+                    <div>role=&quot;button&quot; (name: &quot;Book Power Raking&quot;)</div>
+                    <div>role=&quot;heading&quot; (level: 4, &quot;Spring Power Raking&quot;)</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Automated RTL Test Runner Suite */}
+              <div className="lg:col-span-7 bg-neutral-950 p-4 rounded-xl border border-neutral-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-white block">
+                      Jest + React Testing Library Virtual Suite
+                    </span>
+                    <span className="text-[10px] text-neutral-400">
+                      Behavioral Assertion Runner
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={runRtlTestSuite}
+                    disabled={rtlTestRunning}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold rounded-lg cursor-pointer transition-colors flex items-center gap-1.5 shadow"
+                  >
+                    <Play className="w-3 h-3" />
+                    <span>{rtlTestRunning ? 'Running Tests...' : 'Run Test Suite'}</span>
+                  </button>
+                </div>
+
+                {/* Test Results List */}
+                <div className="space-y-2">
+                  {rtlTestResults.map((t) => (
+                    <div
+                      key={t.id}
+                      className="p-3 bg-neutral-900 rounded-xl border border-neutral-800 space-y-1"
+                    >
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          {t.status === 'passed' ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          ) : (
+                            <div className="w-4 h-4 rounded-full border border-neutral-700" />
+                          )}
+                          <span className="font-bold text-neutral-200">{t.name}</span>
+                        </div>
+                        <span className="font-mono text-[10px] text-neutral-500">{t.ms}ms</span>
+                      </div>
+                      <div className="pl-6 font-mono text-[10px] text-emerald-400/90 overflow-x-auto">
+                        <code>{t.query}</code>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* RTL Philosophy Tip */}
+                <div className="p-3 bg-neutral-900/60 rounded-xl border border-neutral-800/80 text-[11px] text-neutral-300 space-y-1">
+                  <strong className="text-amber-400 block text-xs">Query Priority Rule:</strong>
+                  <p className="text-[10px] leading-relaxed text-neutral-400">
+                    Always prefer <code className="text-white">getByRole</code> with accessible name over <code className="text-white">getByTestId</code>. This guarantees your code works for all users including screen-reader devices.
+                  </p>
+                </div>
               </div>
             </div>
           </div>

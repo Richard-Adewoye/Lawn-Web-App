@@ -148,9 +148,9 @@ export function Navbar({ onOpenQuote, onOpenEducator, isEducatorOpen }: NavbarPr
             }`}
           >
             <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
-            <span className="hidden xl:inline">React Masterclass</span>
+            <span className="hidden xl:inline">React Academy</span>
             <span className="text-[10px] bg-emerald-600 text-white font-bold px-1.5 py-0.5 rounded-full">
-              6 Modules
+              4 Phases · 19 Modules
             </span>
           </button>
 

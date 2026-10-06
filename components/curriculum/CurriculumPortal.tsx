@@ -81,7 +81,7 @@ export function CurriculumPortal({ isOpen, onClose, onInspectComponent }: Curric
             <div className="hidden md:flex items-center gap-2 bg-neutral-950 px-3 py-1.5 rounded-full border border-neutral-800 text-xs">
               <Trophy className="w-4 h-4 text-amber-400" />
               <span className="font-semibold text-neutral-300">
-                Solved: <strong className="text-amber-400">{completedChallenges.length}</strong> / 5 Challenges
+                Solved: <strong className="text-amber-400">{completedChallenges.length}</strong> / {totalModulesCount} Challenges
               </span>
             </div>
 

@@ -38,7 +38,10 @@ export interface PlaygroundConfig {
     | 'lazy-suspense-lab'
     | 'reducer-imperative-lab'
     | 'error-boundary-lab'
-    | 'compound-components-lab';
+    | 'compound-components-lab'
+    | 'data-fetching-lab'
+    | 'form-validation-lab'
+    | 'testing-rtl-lab';
   initialState: any;
 }
 

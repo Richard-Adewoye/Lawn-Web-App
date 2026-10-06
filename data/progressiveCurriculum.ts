@@ -2716,61 +2716,567 @@ Tabs.Tab = function Tab({ value, children }: any) {
     ],
   },
   {
-    id: 'phase-4-architect',
+    id: 'phase-4-real-world-testing',
     phaseNumber: 4,
-    title: 'Phase 4: Production Architect (Next.js 15 & System Design)',
-    badge: 'Architect',
-    description: 'Master the Next.js 15 App Router, Server vs Client component boundaries, SEO metadata, and enterprise architecture.',
-    targetAudience: 'Lead engineers and system architects designing full-stack web applications',
+    title: 'Phase 4: Real-World Patterns & Testing',
+    badge: 'Production & Testing',
+    description: 'Master resilient asynchronous data fetching with AbortController, declarative form validation architectures, and behavioral integration testing using the React Testing Library mindset.',
+    targetAudience: 'Engineers building production-grade enterprise software with bulletproof data layers, typed validation, and automated test confidence',
     modules: [
       {
-        id: 'p4-m1-rsc-boundaries',
-        title: '1. Server/Client Boundaries & Next.js 15 App Router',
-        slug: 'server-client-boundaries-app-router',
-        estimatedMinutes: 35,
+        id: 'p4-m1-data-fetching',
+        title: '1. Data Fetching: Loading/Error States & AbortController',
+        slug: 'data-fetching-loading-error-abortcontroller',
+        estimatedMinutes: 30,
         theory: {
-          summary: 'In Next.js 15, components are Server Components by default. Interactivity is pushed to client leaves using the "use client" directive.',
+          summary: 'In real applications, data is asynchronous. Components must handle three distinct states: Loading (skeleton/spinner), Error (retry prompt), and Success (rendered data). More importantly, rapid user interactions (such as typing in a search bar or switching tabs) cause race conditions unless previous in-flight HTTP requests are explicitly cancelled using the native browser AbortController API.',
           corePrinciples: [
             {
-              headline: 'Zero-Bundle Server Components',
-              body: 'Server Components execute only on the server, sending pre-rendered HTML to the client with zero JavaScript bundle overhead.',
+              headline: 'Principle 1: The Asynchronous Tri-State Machine',
+              body: 'Every data fetching operation should track: { status: "idle" | "loading" | "success" | "error", data: T | null, error: Error | null }. Never leave users in an ambiguous state without loading feedback.',
+              pitfall: 'Only tracking data and ignoring error states: when an API fails, the application freezes indefinitely on a loading spinner.',
             },
             {
-              headline: 'Leaf Node Interactivity Rule',
-              body: 'Place "use client" as far down the component tree as possible so maximum layout remains static.',
+              headline: 'Principle 2: Race Conditions & The Need for Cancellation',
+              body: 'If a user queries "Sylvan Lake", then quickly types "Red Deer", both HTTP requests travel over the network. If the Sylvan Lake request takes 800ms and the Red Deer request takes 200ms, the older request arrives LAST and overwrites the newer search result. This is a classic asynchronous race condition.',
+              pitfall: 'Assuming responses arrive in the same chronological order they were dispatched.',
+            },
+            {
+              headline: 'Principle 3: The AbortController Cleanup Contract',
+              body: 'Instantiate const controller = new AbortController() inside your effect. Pass { signal: controller.signal } into fetch(). In the effect cleanup function, call controller.abort(). If the component unmounts or query dependencies change, the browser instantly cancels the pending TCP request!',
+              pitfall: 'Forgetting to check if (err.name === "AbortError"): aborted requests reject with an AbortError. You must ignore AbortErrors so your UI does not flash an erroneous red error message.',
+            },
+            {
+              headline: 'Principle 4: Modern Data-Fetching Libraries',
+              body: 'While useEffect + fetch demonstrates fundamental mechanics, production React teams use tools like TanStack Query (React Query) or SWR for client fetching, or React Server Components (RSC) in Next.js 15 for zero-waterfall server fetching.',
+              pitfall: 'Reinventing caching, retry-backoff, and refetch-on-focus from scratch in every component instead of leveraging standard libraries.',
             },
           ],
-          codeExamples: [],
+          codeExamples: [
+            {
+              title: 'Production Data Fetching Hook with AbortController',
+              code: `import { useState, useEffect } from 'react';
+
+interface FetchState<T> {
+  data: T | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
+export function useLawnAvailability(location: string): FetchState<any> {
+  const [state, setState] = useState<FetchState<any>>({
+    data: null,
+    isLoading: true,
+    error: null,
+  });
+
+  useEffect(() => {
+    // 1. Create an AbortController instance for this specific run
+    const controller = new AbortController();
+
+    async function loadData() {
+      setState(prev => ({ ...prev, isLoading: true, error: null }));
+      try {
+        const response = await fetch(\`/api/availability?location=\${location}\`, {
+          signal: controller.signal, // 2. Bind the cancellation signal
+        });
+
+        if (!response.ok) throw new Error(\`HTTP \${response.status}: Failed to fetch\`);
+        const json = await response.json();
+
+        // 3. Update state upon successful delivery
+        setState({ data: json, isLoading: false, error: null });
+      } catch (err: any) {
+        // 4. CRITICAL: Ignore intentional cancellation aborts!
+        if (err.name === 'AbortError') {
+          console.log('Previous fetch cancelled via AbortController for:', location);
+          return;
+        }
+        setState({ data: null, isLoading: false, error: err.message || 'Unknown network error' });
+      }
+    }
+
+    loadData();
+
+    // 5. Cleanup: Abort pending request if location changes or component unmounts
+    return () => {
+      controller.abort();
+    };
+  }, [location]);
+
+  return state;
+}`,
+              explanation: 'Notice how controller.abort() runs automatically in cleanup when location changes, canceling stale in-flight requests and preventing race conditions.',
+            },
+          ],
         },
         playground: {
-          id: 'pg-p4-architect',
-          title: 'Server vs Client Tree Visualizer',
-          description: 'Inspect which components hydrate on the client and which render statically on the server.',
-          type: 'props-explorer',
-          initialState: { serverComponentCount: 3, clientComponentCount: 5 },
+          id: 'pg-p4-data-fetching',
+          title: 'Data Fetching & AbortController Race-Condition Lab',
+          description: 'Simulate network requests with adjustable latency. Switch queries rapidly to watch AbortController cancel superseded requests in real time and protect UI state from stale responses.',
+          type: 'data-fetching-lab',
+          initialState: {
+            activeLocation: 'Sylvan Lake',
+            latencyMs: 900,
+            simulateError: false,
+            requestLog: [],
+            isFetching: false,
+          },
         },
         challenge: {
-          id: 'ch-p4-boundary',
-          title: 'Challenge: Refactor to Server Component with Client Leaf',
-          instructions: 'Separate static server data fetching from an interactive client button.',
-          starterCode: `// Convert this to a server component that imports a client button\nexport default function Page() {\n  return <div>Interactive Page</div>;\n}`,
-          solutionCode: `// Server component by default\nimport { InteractiveButton } from './InteractiveButton';\n\nexport default function Page() {\n  return (\n    <main>\n      <h1>Static Server Header</h1>\n      <InteractiveButton />\n    </main>\n  );\n}`,
-          hints: ['Keep page.tsx as a Server Component and import client components.'],
-          explanation: 'Pushing interactivity to leaf nodes minimizes client JavaScript payload.',
+          id: 'ch-p4-data-fetching',
+          title: 'Challenge: Implement Resilient Fetch with AbortController',
+          instructions: 'Complete the "useFetchServices" hook: (1) instantiate "const controller = new AbortController();", (2) pass "{ signal: controller.signal }" to fetch, (3) catch and ignore "AbortError", and (4) return a cleanup function that calls "controller.abort()".',
+          starterCode: `import { useState, useEffect } from 'react';
+
+export function useFetchServices(category: string) {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // TODO 1: Create AbortController
+
+    async function fetchData() {
+      try {
+        // TODO 2: Pass signal to fetch
+        const res = await fetch('/api/services?cat=' + category);
+        const json = await res.json();
+        setData(json);
+        setLoading(false);
+      } catch (err: any) {
+        // TODO 3: Ignore AbortError
+      }
+    }
+
+    fetchData();
+
+    // TODO 4: Return cleanup calling controller.abort()
+  }, [category]);
+
+  return { data, loading };
+}`,
+          solutionCode: `import { useState, useEffect } from 'react';
+
+export function useFetchServices(category: string) {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function fetchData() {
+      try {
+        const res = await fetch('/api/services?cat=' + category, {
+          signal: controller.signal,
+        });
+        const json = await res.json();
+        setData(json);
+        setLoading(false);
+      } catch (err: any) {
+        if (err.name === 'AbortError') return;
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+
+    return () => {
+      controller.abort();
+    };
+  }, [category]);
+
+  return { data, loading };
+}`,
+          hints: [
+            'Create const controller = new AbortController(); at the start of useEffect.',
+            'Pass { signal: controller.signal } as the 2nd argument to fetch().',
+            'In catch(err), check if (err.name === "AbortError") return;',
+            'Return () => controller.abort() from useEffect.',
+          ],
+          explanation: 'AbortController is the Web API standard for canceling network requests and preventing asynchronous memory leaks in React applications.',
           testCases: [
             {
-              description: 'Exports server component page',
+              description: 'Creates new AbortController inside effect',
               validate: (code) => ({
-                passed: /export\s+default\s+function/.test(code),
-                message: 'Export default function Page',
+                passed: /new\s+AbortController\(\)/.test(code),
+                message: 'Instantiate const controller = new AbortController() inside useEffect',
+              }),
+            },
+            {
+              description: 'Passes signal to fetch request options',
+              validate: (code) => ({
+                passed: /signal:\s*\w+\.signal/.test(code),
+                message: 'Pass { signal: controller.signal } in fetch options',
+              }),
+            },
+            {
+              description: 'Ignores AbortError in catch block',
+              validate: (code) => ({
+                passed: /AbortError/.test(code),
+                message: 'Ignore AbortError (e.g. if (err.name === "AbortError") return;)',
+              }),
+            },
+            {
+              description: 'Returns cleanup function calling abort()',
+              validate: (code) => ({
+                passed: /return\s*\(\)\s*=>\s*\{?\s*\w+\.abort\(\)/.test(code) || /return\s*\(\)\s*=>\s*\w+\.abort\(\)/.test(code),
+                message: 'Return cleanup function: return () => controller.abort()',
               }),
             },
           ],
         },
         appliedInApp: {
-          componentName: 'app/page.tsx',
-          filePath: '/app/page.tsx',
-          description: 'Demonstrates Server Component page coordinating with client leaf components.',
+          componentName: 'QuoteModal.tsx',
+          filePath: '/components/QuoteModal.tsx',
+          description: 'Used for asynchronous postal code lookup and live price calculation endpoint integrations.',
+        },
+      },
+      {
+        id: 'p4-m2-form-validation',
+        title: '2. Form Handling & Robust Validation Patterns',
+        slug: 'form-handling-validation-patterns',
+        estimatedMinutes: 30,
+        theory: {
+          summary: 'Forms are the primary medium of transactional user engagement in web apps. Robust form architecture demands: (1) tracking pristine vs touched fields so users are not bombarded with red errors before typing, (2) validating on blur and submit, (3) declarative schema enforcement, and (4) accessible ARIA error binding.',
+          corePrinciples: [
+            {
+              headline: 'Principle 1: The Three States of Form Field Interaction',
+              body: 'Track values (current text), errors (validation error strings), and touched (boolean: has the user focused and blurred this input?). Only display an error if touched[fieldName] is true AND errors[fieldName] exists.',
+              pitfall: 'Showing errors immediately on mount: entering a page and seeing 5 red error messages before typing a single character causes immediate bounce.',
+            },
+            {
+              headline: 'Principle 2: Validate on Blur vs Change',
+              body: 'Validate on blur (when the user finishes typing in a field) for deep checks like email regex or postal codes. Validate on change only after the field has already been touched once, providing instant confirmation when the user corrects an error.',
+              pitfall: 'Shouting errors on every keystroke: showing "Invalid email" while the user has only typed "j" frustrates users.',
+            },
+            {
+              headline: 'Principle 3: Accessibility (a11y) in Form Errors',
+              body: 'When a field fails validation, set aria-invalid="true" on the <input> and link it to the error element using aria-describedby="email-error". This allows screen readers to announce the error immediately.',
+              pitfall: 'Using color alone (red border) to convey an error: colorblind users and screen readers cannot perceive color-only changes.',
+            },
+            {
+              headline: 'Principle 4: Schema Validation (Zod & React Hook Form)',
+              body: 'In modern React, avoid writing hundreds of manual if/else checks. Use a schema library like Zod (z.object({ email: z.string().email() })) integrated with React Hook Form to get compile-time type safety and automated validation pipelines.',
+              pitfall: 'Duplicating validation logic on both client and server: schema libraries allow sharing the exact same validation contract on frontend and backend.',
+            },
+          ],
+          codeExamples: [
+            {
+              title: 'Reusable Form Validation Pattern with Touched State',
+              code: `import React, { useState } from 'react';
+
+interface FormValues {
+  fullName: string;
+  phone: string;
+  propertySqFt: number;
+}
+
+interface FormErrors {
+  fullName?: string;
+  phone?: string;
+  propertySqFt?: string;
+}
+
+export function LawnBusterQuoteForm({ onSubmit }: { onSubmit: (vals: FormValues) => void }) {
+  const [values, setValues] = useState<FormValues>({ fullName: '', phone: '', propertySqFt: 2500 });
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [errors, setErrors] = useState<FormErrors>({});
+
+  // 1. Pure Validation Function
+  const validate = (vals: FormValues): FormErrors => {
+    const errs: FormErrors = {};
+    if (!vals.fullName.trim()) errs.fullName = 'Full name is required';
+    else if (vals.fullName.trim().length < 3) errs.fullName = 'Name must be at least 3 characters';
+
+    const phoneRegex = /^\\+?[0-9\\s\\-\\(\\)]{10,14}$/;
+    if (!vals.phone.trim()) errs.phone = 'Phone number is required';
+    else if (!phoneRegex.test(vals.phone)) errs.phone = 'Enter a valid Alberta phone number';
+
+    if (vals.propertySqFt < 500) errs.propertySqFt = 'Minimum lot size is 500 sq ft';
+    return errs;
+  };
+
+  const handleChange = (field: keyof FormValues, val: any) => {
+    const updated = { ...values, [field]: val };
+    setValues(updated);
+    if (touched[field]) {
+      setErrors(validate(updated)); // Revalidate on change if already touched
+    }
+  };
+
+  const handleBlur = (field: keyof FormValues) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+    setErrors(validate(values));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const allTouched = { fullName: true, phone: true, propertySqFt: true };
+    setTouched(allTouched);
+    const formErrors = validate(values);
+    setErrors(formErrors);
+
+    if (Object.keys(formErrors).length === 0) {
+      onSubmit(values);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <div>
+        <label className="text-xs font-semibold">Full Name</label>
+        <input
+          value={values.fullName}
+          onChange={e => handleChange('fullName', e.target.value)}
+          onBlur={() => handleBlur('fullName')}
+          aria-invalid={Boolean(touched.fullName && errors.fullName)}
+          aria-describedby="name-err"
+          className="w-full border p-2 rounded text-xs"
+        />
+        {touched.fullName && errors.fullName && (
+          <p id="name-err" className="text-red-600 text-xs mt-1">{errors.fullName}</p>
+        )}
+      </div>
+      <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded text-xs font-bold">
+        Submit Booking Request
+      </button>
+    </form>
+  );
+}`,
+              explanation: 'This pattern guarantees that validation errors appear only after the user leaves a field, and ensures forms cannot submit until all fields pass validation.',
+            },
+          ],
+        },
+        playground: {
+          id: 'pg-p4-form-validation',
+          title: 'Interactive Form Validation & Touch Tracking Lab',
+          description: 'Interact with a live multi-field quote form. Inspect the real-time "values", "touched", and "errors" states as you type, blur, and submit.',
+          type: 'form-validation-lab',
+          initialState: {
+            fullName: '',
+            phone: '',
+            lotSqFt: 2800,
+            serviceType: 'aeration',
+            isSubmitted: false,
+          },
+        },
+        challenge: {
+          id: 'ch-p4-form-validation',
+          title: 'Challenge: Implement Pure Form Validation Function',
+          instructions: 'Write a pure function "validateQuoteForm(values)" that checks: (1) fullName must be >= 3 characters (error: "Name too short"), (2) email must include "@" (error: "Invalid email"), and (3) lotSqFt must be > 0 (error: "Lot size required"). Return an object containing error messages, or an empty object if valid.',
+          starterCode: `interface QuoteInput {
+  fullName: string;
+  email: string;
+  lotSqFt: number;
+}
+
+export function validateQuoteForm(values: QuoteInput): Record<string, string> {
+  const errors: Record<string, string> = {};
+
+  // TODO: Add validation rules here
+
+  return errors;
+}`,
+          solutionCode: `interface QuoteInput {
+  fullName: string;
+  email: string;
+  lotSqFt: number;
+}
+
+export function validateQuoteForm(values: QuoteInput): Record<string, string> {
+  const errors: Record<string, string> = {};
+
+  if (!values.fullName || values.fullName.trim().length < 3) {
+    errors.fullName = 'Name too short';
+  }
+
+  if (!values.email || !values.email.includes('@')) {
+    errors.email = 'Invalid email';
+  }
+
+  if (!values.lotSqFt || values.lotSqFt <= 0) {
+    errors.lotSqFt = 'Lot size required';
+  }
+
+  return errors;
+}`,
+          hints: [
+            'Check values.fullName.trim().length < 3 and set errors.fullName = "Name too short".',
+            'Check !values.email.includes("@") and set errors.email = "Invalid email".',
+            'Check values.lotSqFt <= 0 and set errors.lotSqFt = "Lot size required".',
+          ],
+          explanation: 'Decoupling pure validation functions from React UI components enables 100% testable validation logic without needing to mount DOM components.',
+          testCases: [
+            {
+              description: 'Validates fullName length < 3',
+              validate: (code) => ({
+                passed: /fullName.*length\s*<\s*3/.test(code) && /errors\.fullName/.test(code),
+                message: 'Check if fullName.length < 3 and set errors.fullName',
+              }),
+            },
+            {
+              description: 'Validates email contains @',
+              validate: (code) => ({
+                passed: /includes\(['"]@['"]\)/.test(code) && /errors\.email/.test(code),
+                message: 'Check if email includes "@" and set errors.email',
+              }),
+            },
+            {
+              description: 'Validates lotSqFt > 0',
+              validate: (code) => ({
+                passed: /lotSqFt\s*<=?\s*0/.test(code) && /errors\.lotSqFt/.test(code),
+                message: 'Check if lotSqFt <= 0 and set errors.lotSqFt',
+              }),
+            },
+          ],
+        },
+        appliedInApp: {
+          componentName: 'QuoteModal.tsx',
+          filePath: '/components/QuoteModal.tsx',
+          description: 'Centralized client quote submission form enforcing email and phone number validation before quote submission.',
+        },
+      },
+      {
+        id: 'p4-m3-testing-rtl',
+        title: '3. Testing Mindset: React Testing Library & Jest',
+        slug: 'react-testing-library-jest-mindset',
+        estimatedMinutes: 35,
+        theory: {
+          summary: 'The guiding principle of React Testing Library (RTL) is: "The more your tests resemble the way your software is used, the more confidence they can give you." Instead of testing internal component state (like wrapper.state("count")), RTL tests what the user sees on the screen (labels, buttons, text) and how the user interacts (clicks, keypresses).',
+          corePrinciples: [
+            {
+              headline: 'Principle 1: Query Priority Hierarchy',
+              body: 'Always query elements using the accessibility tree first: (1) getByRole(role, { name }) (e.g. getByRole("button", { name: /book/i })), (2) getByLabelText(text) for form inputs, (3) getByPlaceholderText(), (4) getByText(). Only use getByTestId() as a last resort when semantic selectors are impossible.',
+              pitfall: 'Relying heavily on container.querySelector(".my-css-class"): class names change during redesigns, which causes brittle tests to break even when user functionality is unharmed.',
+            },
+            {
+              headline: 'Principle 2: Test User Behavior, Not Implementation',
+              body: 'Never test whether useState was called or what private variable was assigned. Test that when the user clicks the "Get Quote" button, the modal appears in the DOM and the price displays "$89 CAD". This makes your tests refactor-proof.',
+              pitfall: 'Testing component internals: if you rewrite a component from useState to useReducer, a good behavioral test should still pass 100% without changes.',
+            },
+            {
+              headline: 'Principle 3: Asynchronous Queries (findBy vs getBy vs queryBy)',
+              body: 'getBy*: Synchronous; throws an error immediately if the element is not found. queryBy*: Synchronous; returns null if not found (used to assert an element is NOT present: expect(queryByRole("dialog")).not.toBeInTheDocument()). findBy*: Asynchronous; returns a Promise that waits up to 1000ms for element to appear (used after async fetches).',
+              pitfall: 'Using getBy* on an element that appears after an API call: getBy* throws immediately without waiting for the promise to resolve.',
+            },
+            {
+              headline: 'Principle 4: userEvent vs fireEvent',
+              body: 'Prefer @testing-library/user-event over fireEvent. fireEvent dispatches raw DOM events, whereas userEvent simulates the entire browser user action (focusing, clicking, keydown, keyup, change).',
+              pitfall: 'Using fireEvent.change without triggering blur: real users fire mouse and blur events that activate touched validation states.',
+            },
+          ],
+          codeExamples: [
+            {
+              title: 'Canonical React Testing Library Test Suite',
+              code: `import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import { Hero } from '@/components/Hero';
+
+describe('LawnBuster Hero Component', () => {
+  it('renders primary CTA button and triggers quote modal on click', () => {
+    // 1. Arrange: Render component with mocked callback
+    const handleOpenQuote = jest.fn();
+    render(<Hero onOpenQuote={handleOpenQuote} onOpenVideo={jest.fn()} />);
+
+    // 2. Query using Accessible Role & Name
+    const ctaButton = screen.getByRole('button', { name: /get a quote/i });
+    expect(ctaButton).toBeInTheDocument();
+
+    // 3. Act: Simulate user click
+    fireEvent.click(ctaButton);
+
+    // 4. Assert: Verify expected external behavior
+    expect(handleOpenQuote).toHaveBeenCalledTimes(1);
+  });
+
+  it('verifies 4.9 star Google review badge is visible to user', () => {
+    render(<Hero onOpenQuote={jest.fn()} onOpenVideo={jest.fn()} />);
+
+    // Query semantic text visible on screen
+    expect(screen.getByText(/4\\.9/i)).toBeInTheDocument();
+    expect(screen.getByText(/Central Alberta/i)).toBeInTheDocument();
+  });
+});`,
+              explanation: 'This test models real user interactions: it searches for an accessible button by its visible label and asserts that the callback is triggered upon clicking.',
+            },
+          ],
+        },
+        playground: {
+          id: 'pg-p4-testing-rtl',
+          title: 'Virtual React Testing Library Test Runner',
+          description: 'Run automated RTL tests against an interactive service quote card. Click buttons to trigger test assertions, inspect accessibility roles, and watch the test suite turn green!',
+          type: 'testing-rtl-lab',
+          initialState: {
+            suiteRunning: false,
+            testsPassed: 4,
+            totalTests: 4,
+            selectedService: 'Power Raking',
+            price: 89,
+            isBooked: false,
+          },
+        },
+        challenge: {
+          id: 'ch-p4-testing-rtl',
+          title: 'Challenge: Write an Accessible RTL Test Assertion',
+          instructions: 'Write a Jest/RTL test assertion: (1) Query the button with screen.getByRole("button", { name: /book service/i }), (2) Simulate a user click with fireEvent.click(button), and (3) Assert expect(handleBook).toHaveBeenCalledWith("srv-1").',
+          starterCode: `import { render, screen, fireEvent } from '@testing-library/react';
+
+test('calls handleBook callback with service ID on click', () => {
+  const handleBook = jest.fn();
+  render(<button onClick={() => handleBook('srv-1')}>Book Service</button>);
+
+  // TODO 1: Query the button using screen.getByRole('button', { name: /book service/i })
+  const btn = null;
+
+  // TODO 2: Fire click event
+
+  // TODO 3: Assert handleBook was called with 'srv-1'
+});`,
+          solutionCode: `import { render, screen, fireEvent } from '@testing-library/react';
+
+test('calls handleBook callback with service ID on click', () => {
+  const handleBook = jest.fn();
+  render(<button onClick={() => handleBook('srv-1')}>Book Service</button>);
+
+  const btn = screen.getByRole('button', { name: /book service/i });
+  fireEvent.click(btn);
+
+  expect(handleBook).toHaveBeenCalledWith('srv-1');
+});`,
+          hints: [
+            'Query: const btn = screen.getByRole("button", { name: /book service/i });',
+            'Click: fireEvent.click(btn);',
+            'Assert: expect(handleBook).toHaveBeenCalledWith("srv-1");',
+          ],
+          explanation: 'Testing via accessible roles ensures both normal users and assistive technology users can reliably navigate your React application.',
+          testCases: [
+            {
+              description: 'Queries button using screen.getByRole with name regex',
+              validate: (code) => ({
+                passed: /screen\.getByRole\(['"]button['"],\s*\{\s*name:/.test(code),
+                message: 'Use screen.getByRole("button", { name: /book service/i })',
+              }),
+            },
+            {
+              description: 'Dispatches click event via fireEvent.click',
+              validate: (code) => ({
+                passed: /fireEvent\.click\(/.test(code),
+                message: 'Simulate user click using fireEvent.click(...)',
+              }),
+            },
+            {
+              description: 'Asserts mock function called with expected service id argument',
+              validate: (code) => ({
+                passed: /expect\(handleBook\)\.toHaveBeenCalledWith\(['"]srv-1['"]\)/.test(code) || /expect\(handleBook\)\.toHaveBeenCalled/.test(code),
+                message: 'Assert expect(handleBook).toHaveBeenCalledWith("srv-1")',
+              }),
+            },
+          ],
+        },
+        appliedInApp: {
+          componentName: 'Hero.tsx',
+          filePath: '/components/Hero.tsx',
+          description: 'The Hero and Navbar CTA buttons are designed for automated behavioral testing via accessible button roles.',
         },
       },
     ],
