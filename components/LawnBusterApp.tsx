@@ -12,14 +12,16 @@ import { QuoteModal } from '@/components/QuoteModal';
 import { ServiceDetailModal } from '@/components/ServiceDetailModal';
 import { VideoModal } from '@/components/VideoModal';
 import { ReactEducatorPanel } from '@/components/ReactEducatorPanel';
+import { CurriculumPortal } from '@/components/curriculum/CurriculumPortal';
 import { ServiceItem } from '@/types';
-import { Code2, Sparkles, GraduationCap } from 'lucide-react';
+import { Code2, Sparkles, GraduationCap, BookOpen } from 'lucide-react';
 
 export function LawnBusterApp() {
   const [isQuoteOpen, setIsQuoteOpen] = useState(false);
   const [isVideoOpen, setIsVideoOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
   const [isEducatorOpen, setIsEducatorOpen] = useState(false);
+  const [isCurriculumOpen, setIsCurriculumOpen] = useState(false);
   const [activeInspector, setActiveInspector] = useState(false);
   const [inspectedComponent, setInspectedComponent] = useState<string | null>(null);
 
@@ -78,8 +80,8 @@ export function LawnBusterApp() {
         )}
         <Navbar
           onOpenQuote={() => handleOpenQuote()}
-          onOpenEducator={() => setIsEducatorOpen(true)}
-          isEducatorOpen={isEducatorOpen}
+          onOpenEducator={() => setIsCurriculumOpen(true)}
+          isEducatorOpen={isCurriculumOpen}
         />
       </div>
 
@@ -160,22 +162,22 @@ export function LawnBusterApp() {
       >
         <Footer
           onOpenQuote={() => handleOpenQuote()}
-          onOpenEducator={() => setIsEducatorOpen(true)}
+          onOpenEducator={() => setIsCurriculumOpen(true)}
         />
       </div>
 
       {/* Floating React Masterclass Button for easy learning access */}
       <button
-        onClick={() => setIsEducatorOpen(true)}
-        aria-label="Open React Masterclass"
+        onClick={() => setIsCurriculumOpen(true)}
+        aria-label="Open React Progressive Curriculum Academy"
         className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 px-4 py-3 rounded-full bg-neutral-900 text-white hover:bg-black shadow-2xl border border-neutral-700 hover:scale-105 transition-all cursor-pointer group"
       >
-        <div className="w-6 h-6 rounded-full bg-emerald-500 text-neutral-950 flex items-center justify-center font-black">
-          <GraduationCap className="w-3.5 h-3.5" />
+        <div className="w-7 h-7 rounded-full bg-[#bef264] text-neutral-950 flex items-center justify-center font-black">
+          <GraduationCap className="w-4 h-4 stroke-[2.5]" />
         </div>
         <div className="text-left text-xs font-bold leading-tight">
-          <span className="block text-amber-300">React Masterclass</span>
-          <span className="text-[10px] text-neutral-400 font-normal">Beginner → Advanced</span>
+          <span className="block text-amber-300">React Academy: 4 Phases</span>
+          <span className="text-[10px] text-neutral-400 font-normal">Playgrounds & Mini-Challenges</span>
         </div>
       </button>
 
@@ -201,6 +203,15 @@ export function LawnBusterApp() {
         onClose={() => setIsEducatorOpen(false)}
         activeInspector={activeInspector}
         onToggleInspector={() => setActiveInspector(!activeInspector)}
+      />
+
+      <CurriculumPortal
+        isOpen={isCurriculumOpen}
+        onClose={() => setIsCurriculumOpen(false)}
+        onInspectComponent={(name) => {
+          setIsCurriculumOpen(false);
+          setActiveInspector(true);
+        }}
       />
     </div>
   );
