@@ -1,0 +1,6 @@
+{
+  "name": "LawnBuster — Central Alberta Lawn Care",
+  "description": "Central Alberta lawn care, done right now. Mowing, landscaping, aeration, and snow removal for homes and businesses across Sylvan Lake, Red Deer, and Central Alberta.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
