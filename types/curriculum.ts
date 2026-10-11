@@ -45,6 +45,30 @@ export interface PlaygroundConfig {
   initialState: any;
 }
 
+export interface KnowledgeCheckQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+}
+
+export interface KnowledgeCheckQuiz {
+  id: string;
+  title: string;
+  description: string;
+  questions: KnowledgeCheckQuestion[];
+}
+
+export interface UserProgressData {
+  completedModules: string[];
+  completedChallenges: string[];
+  quizScores: Record<string, { score: number; total: number; passed: boolean }>;
+  lastPhaseId: string;
+  lastModuleId: string;
+  totalXp: number;
+}
+
 export interface CurriculumModule {
   id: string;
   title: string;
@@ -65,6 +89,7 @@ export interface CurriculumModule {
   };
   playground: PlaygroundConfig;
   challenge: MiniChallenge;
+  quiz?: KnowledgeCheckQuiz;
   appliedInApp: {
     componentName: string;
     filePath: string;
