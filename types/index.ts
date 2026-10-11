@@ -43,3 +43,21 @@ export interface EducationalModule {
     explanation: string;
   };
 }
+
+export interface TestimonialItem {
+  id: string;
+  author: string;
+  role: string;
+  city: 'Red Deer' | 'Sylvan Lake';
+  neighborhood: string;
+  rating: number;
+  date: string;
+  service: string;
+  tenure: string;
+  highlight: string;
+  comment: string;
+  verified: boolean;
+  avatarInitials: string;
+  avatarBg: string;
+  helpfulCount: number;
+}

@@ -128,6 +128,12 @@ export function Navbar({ onOpenQuote, onOpenEducator, isEducatorOpen }: NavbarPr
           </div>
 
           <a
+            href="#testimonials"
+            className="px-3.5 py-1.5 rounded-full hover:text-[#0f2419] hover:bg-white/70 transition-colors"
+          >
+            Reviews
+          </a>
+          <a
             href="#contact"
             className="px-3.5 py-1.5 rounded-full hover:text-[#0f2419] hover:bg-white/70 transition-colors"
           >
@@ -221,6 +227,13 @@ export function Navbar({ onOpenQuote, onOpenEducator, isEducatorOpen }: NavbarPr
               className="px-3 py-2 rounded-lg hover:bg-neutral-100"
             >
               Our Process
+            </a>
+            <a
+              href="#testimonials"
+              onClick={() => setMobileMenuOpen(false)}
+              className="px-3 py-2 rounded-lg hover:bg-neutral-100"
+            >
+              Customer Reviews (Red Deer & Sylvan Lake)
             </a>
             <a
               href="#contact"

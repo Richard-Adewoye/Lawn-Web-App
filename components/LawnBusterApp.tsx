@@ -7,6 +7,7 @@ import { Partners } from '@/components/Partners';
 import { AboutSection } from '@/components/AboutSection';
 import { ServicesSection } from '@/components/ServicesSection';
 import { ProcessSection } from '@/components/ProcessSection';
+import { CustomerTestimonials } from '@/components/CustomerTestimonials';
 import { Footer } from '@/components/Footer';
 import { QuoteModal } from '@/components/QuoteModal';
 import { ServiceDetailModal } from '@/components/ServiceDetailModal';
@@ -153,9 +154,22 @@ export function LawnBusterApp() {
           )}
           <ProcessSection onOpenQuote={() => handleOpenQuote()} />
         </div>
+
+        {/* 7. Customer Testimonials (Red Deer & Sylvan Lake) */}
+        <div
+          className={activeInspector ? 'relative outline-2 outline-dashed outline-amber-500 m-1' : ''}
+          onClick={activeInspector ? () => { setInspectedComponent('CustomerTestimonials'); setIsEducatorOpen(true); } : undefined}
+        >
+          {activeInspector && (
+            <div className="absolute top-2 left-4 z-40 bg-amber-500 text-white text-[10px] font-mono px-2 py-0.5 rounded shadow">
+              &lt;CustomerTestimonials onOpenQuote=&#123;fn&#125; /&gt; · Red Deer &amp; Sylvan Lake Reviews
+            </div>
+          )}
+          <CustomerTestimonials onOpenQuote={() => handleOpenQuote()} />
+        </div>
       </main>
 
-      {/* 7. Footer */}
+      {/* 8. Footer */}
       <div
         className={activeInspector ? 'relative outline-2 outline-dashed outline-neutral-500 m-1' : ''}
         onClick={activeInspector ? () => { setInspectedComponent('Footer'); setIsEducatorOpen(true); } : undefined}

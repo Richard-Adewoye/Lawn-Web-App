@@ -59,6 +59,11 @@ export function Footer({ onOpenQuote, onOpenEducator }: FooterProps) {
               <li>Lacombe, AB</li>
               <li>Innisfail, AB</li>
               <li>Ponoka County</li>
+              <li className="pt-1.5">
+                <a href="#testimonials" className="text-[#bef264] hover:underline flex items-center gap-1 font-semibold">
+                  ★ Read Local Reviews
+                </a>
+              </li>
             </ul>
           </div>
 

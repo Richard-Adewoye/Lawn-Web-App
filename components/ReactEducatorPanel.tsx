@@ -298,6 +298,7 @@ export function ReactEducatorPanel({
                   <div>│   ├── AboutSection.tsx   <span className="text-neutral-500">{'# Mower photo card, social links, narrative & stats'}</span></div>
                   <div>│   ├── ServicesSection.tsx<span className="text-neutral-500">{'# Horizontal slider, Power Raking, Fertilizing, Snow'}</span></div>
                   <div>│   ├── ProcessSection.tsx <span className="text-neutral-500">{'# Bento grid steps: Free Assessment, GPS Radar, Guarantee'}</span></div>
+                  <div>│   ├── CustomerTestimonials.tsx <span className="text-neutral-500">{'# Verified homeowner reviews from Red Deer & Sylvan Lake'}</span></div>
                   <div>│   ├── QuoteModal.tsx     <span className="text-neutral-500">{'# Instant lot calculator with 5% AB GST derived state'}</span></div>
                   <div>│   ├── ServiceDetailModal.tsx <span className="text-neutral-500">{'# Service breakdowns, timings & equipment'}</span></div>
                   <div>│   ├── VideoModal.tsx     <span className="text-neutral-500">{'# Yard transformation showcase clip'}</span></div>
